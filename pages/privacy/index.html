@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BBM - Dashboard</title>
+
+    <link rel="stylesheet" href="../../shared/css/variables.css" />
+    <link rel="stylesheet" href="../../shared/css/standard.css" />
+    <link rel="stylesheet" href="../../shared/css/fonts.css" />
+    <link rel="stylesheet" href="../../shared/css/assets.css" />
+    <link rel="stylesheet" href="../../shared/css/header_footer.css" />
+    <style>
+        .font_yellow_light_color {
+            color: #ffe066;
+        }
+    </style>
+
+    <script src="../../shared/js/ui_helper.js"></script>
+    <script src="../../shared/js/api.js"></script>
+    <script src="../../shared/js/header.js"></script>
+
+    <script>
+        function checkNav() {
+            if (getAuthUserId() == null) document.querySelector("nav").remove();
+        }
+    </script>
+</head>
+
+<body onload="setHeader();checkNav()">
+    <header onclick="redirectToDashboard()" class="main_header w_full">
+        <img onclick="redirectToDashboard()" src="../../assets/icons/bbm.png" alt="" height="48" />
+        <div id="head_content_right" class="d_flex_cc_gm head_content_right"></div>
+    </header>
+    <main class="w_full d_flex_ss_gl font_white_color">
+
+        <nav class="font_sec_color w_full">
+            <a class="link_secondary" href="../dashboard/">Dashboard</a> /
+            <a class="link_secondary" href="./index.html">Privacy Policy</a>
+        </nav>
+
+        <h1 class="font_prime_color">Privacy Policy</h1>
+
+        <section class="d_flex_ss_gm f_d_c">
+            <h2>Data Protection and Privacy</h2>
+            <p>
+                We at BBM Productions AG take your privacy seriously and are committed to protecting your personal data. This Privacy Policy explains how we collect, use, and safeguard your information when you use the KanMind application and its backend services.
+            </p>
+            <h3>Data Collection</h3>
+            <p>
+                We collect personal data such as your email address, full name, and any content you create or upload within the KanMind platform. This data is used solely for the purposes of managing your tasks, boards, comments, and user authentication.
+            </p>
+            <h3>Data Usage</h3>
+            <p>
+                Your data is used to provide and improve the KanMind services, enable communication between users (such as email notifications for comments), and to secure your account via authentication mechanisms.
+            </p>
+            <h3>Data Sharing</h3>
+            <p>
+                We do not share your personal data with third parties except as required by law or to trusted service providers who assist in operating our platform (e.g., email services). Your data remains confidential and protected.
+            </p>
+            <h3>Security Measures</h3>
+            <p>
+                We implement industry-standard security measures to protect your data from unauthorized access, alteration, or disclosure.
+            </p>
+            <h3>Your Rights</h3>
+            <p>
+                You have the right to access, correct, or delete your personal data. For any inquiries or requests regarding your data, please contact us at
+                <a class="font_yellow_light_color" href="mailto:leugzim.rullani@bbmproductions.ch">leugzim.rullani@bbmproductions.ch</a>,
+                <a class="font_yellow_light_color" href="mailto:info@bbmproductions.ch">info@bbmproductions.ch</a>
+                or call us at
+                <a class="font_yellow_light_color" href="tel:+41764885610">+41 76 488 56 10</a>.
+            </p>
+            <h3>Contact</h3>
+            <div style="font-style: normal;">
+                <p><strong>BBM Productions AG</strong></p>
+                <p>Rheinstrasse 74, 4323 Wallbach</p>
+                <p>
+                    Phone 1: <a class="font_yellow_light_color" href="tel:+41764885610">+41 76 488 56 10</a>
+                </p>
+                <p>
+                    Phone 2: <a class="font_yellow_light_color" href="tel:+41562100740">+41 56 210 07 40</a>
+                </p>
+                <p>
+                    Email 1: <a class="font_yellow_light_color" href="mailto:leugzim.rullani@bbmproductions.ch">leugzim.rullani@bbmproductions.ch</a>
+                </p>
+                <p>
+                    Email 2: <a class="font_yellow_light_color" href="mailto:info@bbmproductions.ch">info@bbmproductions.ch</a>
+                </p>
+                <p>Data Protection Officer: Leugzim Rullani</p>
+            </div>
+        </section>
+    </main>
+    <footer class="main_footer  w_full">
+        <nav class="d_flex_cs_gl">
+            <a href="../imprint/index.html" class="link">Imprint</a>
+        </nav>
+    </footer>
+</body>
+
+</html>

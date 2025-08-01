@@ -71,15 +71,28 @@ function setError(valid, id) {
 }
 
 /**
- * Extracts the initials from a full name string.
- * Assumes the fullname contains at least two parts separated by spaces.
- * @param {string} fullname - The full name of the user.
- * @returns {string} The uppercase initials of the first two name parts.
+ * Returns the initials of a given full name.
+ * Works with one‑part or multi‑part names and is null‑safe.
+ *
+ * @param {string} fullname – e.g. "John Doe"   |  "Madonna" | ""
+ * @returns {string} e.g. "JD", "M", "?"
  */
 function getInitials(fullname) {
-    const parts = fullname.trim().split(" ");
-    const initials = parts[0][0].toUpperCase() + parts[1][0].toUpperCase();
-    return initials;
+    if (!fullname || typeof fullname !== "string") {
+        return "?";
+    }
+
+    const parts = fullname.trim().split(/\s+/).filter(Boolean);
+
+    if (parts.length === 0) {
+        return "?";
+    }
+
+    if (parts.length === 1) {
+        return parts[0][0].toUpperCase();
+    }
+
+    return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
 /**

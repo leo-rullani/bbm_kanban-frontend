@@ -767,6 +767,24 @@ function fillCreateEditTaskTitleInputDesc() {
 }
 
 /**
+ * Sends a DELETE request to remove the task with the given ID.
+ *
+ * @param {number|string} id - The unique identifier of the task.
+ * @returns {Promise<void>}
+ */
+async function deleteTask(id) {
+    let response = await deleteData(TASKS_URL + id + "/");
+    if (!response.ok) {
+        let errorArr = extractErrorMessages(response.data);
+        showToastMessage(true, errorArr);
+    } else {
+        cleanCurrentTask();
+        toggleOpenId("dialog_wrapper");
+        await loadAndRenderTasks();
+    }
+}
+
+/**
  * Loads the latest board data and renders all tasks in the UI.
  *
  * Fetches the board data from the API and updates the task lists.

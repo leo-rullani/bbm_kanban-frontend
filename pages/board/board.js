@@ -82,14 +82,28 @@ function cleanCurrentTask() {
  * @returns {Promise<void>} Resolves when initialization is complete.
  */
 async function init() {
-    await setBoard()
-    cleanCurrentTask()
-    renderAllTasks()
-    renderMemberList()
-    renderTitle()
-    if(getParamFromUrl("task_id")) openTaskDetailDialog(getParamFromUrl("task_id"))
-}
+    await setBoard();
 
+    /* ❶ Board‑Objekt im globalen Scope ablegen,
+       damit pdf_export.js es sicher findet                */
+    window.currentBoard = currentBoard;
+
+    cleanCurrentTask();
+    renderAllTasks();
+    renderMemberList();
+    renderTitle();
+
+    /* ---------- PDF‑EXPORT HOOK ---------- */
+    if (currentBoard.title === 'Debriefing – Swiss Football League') {
+        document.getElementById('pdf-download-btn').style.display = 'flex';
+
+        const pdfMod = await import('./pdf_export.js');   // gleiches Verzeichnis
+        window.downloadDebriefingPdf = pdfMod.downloadDebriefingPdf;
+    }
+    /* -------- END PDF‑EXPORT HOOK -------- */
+
+    if (getParamFromUrl('task_id')) openTaskDetailDialog(getParamFromUrl('task_id'));
+}
 /**
  * Updates the board title in the DOM.
  *
@@ -293,15 +307,18 @@ function renderDetailTaskComments() {
  * @param {string} [status] - (Optional) The status to assign to the new task (e.g., "to-do", "in-progress").
  */
 function openCreateTaskDialog(status) {
-    cleanCurrentTask()
-    if (status) {
-        currentTask.status = status
-    } else {
-        currentTask.status = "to-do"
+    cleanCurrentTask();
+    currentTask.status = status || 'to-do';
+
+    /* Nur im Debriefing‑Board: Formular als Default‑Description */
+    if (currentBoard.title === 'Debriefing – Swiss Football League' && window.DEBRIEFING_FORM_HTML) {
+        currentTask.description = window.DEBRIEFING_FORM_HTML;
     }
-    changeCurrentDialog("create_edit_task_dialog")
-    toggleOpenId('dialog_wrapper')
-    fillEditCreateTaskDialog('create')
+
+
+    changeCurrentDialog('create_edit_task_dialog');
+    toggleOpenId('dialog_wrapper');
+    fillEditCreateTaskDialog('create');
 }
 
 /**
@@ -371,6 +388,35 @@ function fillEditCreateTaskDialog(type) {
     renderTaskCreateMemberList()
     setTaskCreateDropdownPrioHeader()
     setSelectAddEditTaskStatusDropdown()
+
+    /* ---------- only once: Blur‑Autosave ---------- */
+const desc = document.getElementById('create_edit_task_description');
+if (!desc.dataset.listenerSet) {
+    desc.addEventListener('blur', async e => {
+        if (document.getElementById('create_edit_task_dialog').getAttribute('dialog-type') === 'edit') {
+            await patchData(TASKS_URL + currentTask.id + '/', { description: e.target.innerHTML });
+        }
+    }, true);
+    desc.dataset.listenerSet = 'true';
+}
+
+/* ---------- PDF‑Button Sichtbarkeit + Callback ---------- */
+const pdfBtn = document.getElementById('task-pdf-btn');
+if (currentBoard.title === 'Debriefing – Swiss Football League') {
+    pdfBtn.style.display = 'flex';
+    if (!window.exportDebriefingTaskPdf) {
+        // dynamisch den Exporter nachladen
+        import('../../shared/js/pdf_export_task.js').then(mod => {
+            window.exportDebriefingTaskPdf = () =>
+                mod.taskHtmlToPdf(
+                    document.getElementById('create_edit_task_description').innerHTML,
+                    document.getElementById('create_edit_task_title_input').value || 'debriefing'
+                );
+        });
+    }
+} else {
+    pdfBtn.style.display = 'none';
+}
 }
 
 /**
@@ -557,7 +603,7 @@ function getValidatedTask() {
         let updatedTask = {
             "board": currentBoard.id,
             "title": titleRef.value,
-            "description": document.getElementById('create_edit_task_description').value,
+            "description": document.getElementById('create_edit_task_description').innerHTML,
             "status": currentTask.status,
             "priority": currentTask.priority,
             "reviewer_id": currentTask.reviewer ? currentTask.reviewer.id : null,
@@ -715,9 +761,9 @@ function abbortCreateEditTask() {
  * Populates the corresponding input elements with the values from currentTask.
  */
 function fillCreateEditTaskTitleInputDesc() {
-    document.getElementById('create_edit_task_title_input').value = currentTask.title
-    document.getElementById('create_edit_task_date_input').value = currentTask.due_date
-    document.getElementById('create_edit_task_description').value = currentTask.description
+    document.getElementById('create_edit_task_title_input').value = currentTask.title || '';
+    document.getElementById('create_edit_task_date_input').value = currentTask.due_date || '';
+    document.getElementById('create_edit_task_description').innerHTML = currentTask.description || '';
 }
 
 /**

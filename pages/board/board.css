@@ -8,8 +8,6 @@ main {
     height: calc(100vh - 168px);
 }
 
-
-
 .board_container {
     flex: 1;
     display: flex;
@@ -61,6 +59,7 @@ main {
     display: flex;
     flex-direction: column;
     gap: 16px;
+    color: white;
 }
 
 .column_card_header {

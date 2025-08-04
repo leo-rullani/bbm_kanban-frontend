@@ -95,7 +95,7 @@ async function init() {
 
     /* ---------- PDF‑EXPORT HOOK ---------- */
     if (currentBoard.title === 'Debriefing – Swiss Football League') {
-        document.getElementById('pdf-download-btn').style.display = 'flex';
+        document.getElementById('pdf-download-btn').style.display = 'none';
 
         const pdfMod = await import('./pdf_export.js');   // gleiches Verzeichnis
         window.downloadDebriefingPdf = pdfMod.downloadDebriefingPdf;
@@ -298,23 +298,58 @@ function renderDetailTaskComments() {
     listRef.innerHTML = listHtml;
 }
 
+/* ------------------------------------------------------------------ */
+/*  GRAPHICS–BOARD DETECTION                                          */
+/* ------------------------------------------------------------------ */
+/**
+ * Returns true if the current board is the new “Graphics Rapport” board.
+ * We use a simple title heuristic (“Graphics –” or “GFX‑RAPPORT”).
+ *
+ * @returns {boolean}
+ */
+function isGraphicsRapportBoard() {
+    if (!currentBoard?.title) return false;
+    const t = currentBoard.title.toLowerCase();
+    return t.startsWith('graphics') || t.includes('gfx‑rapport');
+}
+
+/* ------------------------------------------------------------------ */
+/*  DEFAULT‑FORMULAR INJECTOR                                         */
+/* ------------------------------------------------------------------ */
+/**
+ * Assigns the pre‑generated Graphics‑Rapport HTML snippet to
+ * `currentTask.description` when the board is a Graphics board.
+ * Fallbacks gracefully if the template isn’t loaded yet.
+ */
+function setDefaultDescriptionForGraphics() {
+    if (isGraphicsRapportBoard() && window.GRAPHICS_RAPPORT_FORM_HTML) {
+        currentTask.description = window.GRAPHICS_RAPPORT_FORM_HTML;
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/*  REPLACED openCreateTaskDialog()                                   */
+/* ------------------------------------------------------------------ */
 /**
  * Opens the dialog to create a new task.
+ * Adds support for:
+ *   • Debriefing‑Boards   → window.DEBRIEFING_FORM_HTML
+ *   • Graphics‑Boards     → window.GRAPHICS_RAPPORT_FORM_HTML  ← NEU
  *
- * Resets the currentTask object, sets the task status if provided (defaults to "to-do"),
- * switches the current dialog to the task creation dialog, and fills the form fields.
- *
- * @param {string} [status] - (Optional) The status to assign to the new task (e.g., "to-do", "in-progress").
+ * @param {string} [status] Optional status preset (“to‑do”, “in‑progress”…)
  */
 function openCreateTaskDialog(status) {
     cleanCurrentTask();
     currentTask.status = status || 'to-do';
 
-    /* Nur im Debriefing‑Board: Formular als Default‑Description */
-    if (currentBoard.title === 'Debriefing – Swiss Football League' && window.DEBRIEFING_FORM_HTML) {
+    // Debriefing‑Spezialfall
+    if (currentBoard.title === 'Debriefing – Swiss Football League'
+        && window.DEBRIEFING_FORM_HTML) {
         currentTask.description = window.DEBRIEFING_FORM_HTML;
     }
 
+    // Graphics‑Spezialfall  ← ‼️ das ist entscheidend
+    setDefaultDescriptionForGraphics();
 
     changeCurrentDialog('create_edit_task_dialog');
     toggleOpenId('dialog_wrapper');
@@ -403,7 +438,7 @@ if (!desc.dataset.listenerSet) {
 /* ---------- PDF‑Button Sichtbarkeit + Callback ---------- */
 const pdfBtn = document.getElementById('task-pdf-btn');
 if (currentBoard.title === 'Debriefing – Swiss Football League') {
-    pdfBtn.style.display = 'flex';
+    pdfBtn.style.display = 'none';
     if (!window.exportDebriefingTaskPdf) {
         // dynamisch den Exporter nachladen
         import('../../shared/js/pdf_export_task.js').then(mod => {

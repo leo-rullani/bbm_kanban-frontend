@@ -3,10 +3,11 @@
  */
 window.DEBRIEFING_FORM_HTML = `
 <style>
-  /* Basis‑Layout – über­nimmt die Farb‑Variablen deiner App */
+  /* Basis‑Layout – übernimmt die Farb‑Variablen deiner App */
   table        { width:100%; border-collapse:collapse; font-size:12pt; }
-  th, td       { border:1px solid #fff; padding:4px 6px; text-align:left; vertical-align:top; }
-  thead tr th  { background:#bfbfbf; font-weight:700; text-align:left; }
+  th, td       { border:1px solid #fff; padding:4px 6px; text-align:left; vertical-align:top;
+                 white-space:normal; word-break:break-word; }          /* Zeilenumbruch */
+  thead tr th  { background:var(--font-prime-color); font-weight:700; text-align:left; width: 27mm;color: var(--bg-color)}
   h2,h3        { margin:8mm 0 4mm 0; }
 
   /* gelber Callout unten */
@@ -16,7 +17,7 @@ window.DEBRIEFING_FORM_HTML = `
       font-size:14pt;
       padding:6mm 0;
       text-align:center;
-      color:#000;
+      color: var(--bg-color);
   }
 
   /* kleiner Hinweis‑Text */
@@ -34,41 +35,41 @@ window.DEBRIEFING_FORM_HTML = `
   <tr><th>Spiel</th>             <td contenteditable="true"></td></tr>
   <tr><th>Runde</th>             <td contenteditable="true"></td></tr>
   <tr><th>Datum</th>             <td contenteditable="true"></td></tr>
-  <tr><th>Reportagewagen</th>    <td contenteditable="true"></td></tr>
-  <tr><th>Projektleitung SRF, RTS, RSI</th><td contenteditable="true"></td></tr>
+  <tr><th>Wagen</th>             <td contenteditable="true"></td></tr>
+  <tr><th>Projektleitung BBM</th><td contenteditable="true"></td></tr>
   <tr><th>Regie</th>             <td contenteditable="true"></td></tr>
   <tr><th>Produzent</th>         <td contenteditable="true"></td></tr>
-  <tr><th>Aufnahmeleitung</th>   <td contenteditable="true"></td></tr>
-  <tr><th>Technischer Leiter</th><td contenteditable="true"></td></tr>
-  <tr><th>Toningenieur</th>      <td contenteditable="true"></td></tr>
+  <tr><th>AL</th>                <td contenteditable="true"></td></tr>
+  <tr><th>Tech. Leiter</th>      <td contenteditable="true"></td></tr>
+  <tr><th>Ton</th>               <td contenteditable="true"></td></tr>
   <tr><th>Grafik</th>            <td contenteditable="true"></td></tr>
   <tr><th>VAR RA</th>            <td contenteditable="true"></td></tr>
 </table>
 
 
-<!-- ► Produktions‑Technik -------------------------------------------------- -->
+<!-- ► Produktions‑Technik -------------------------------------------------- -->
 <h3>Produktions‑Technik</h3>
 <table>
   <thead><tr>
-    <th>Produktions‑Technik</th>
-    <th style="width:30mm"> </th>
+    <th>Produktions<br>‑Technik</th>
+    <th style="width:21mm"></th>
     <th>Grund</th>
   </tr></thead>
   <tr>
-    <td>Allfällige Probleme RW</td>
+    <td>Probleme<br>RW</td>
     <td style="text-align:center"><input type="checkbox"> Nicht OK</td>
     <td contenteditable="true"></td>
   </tr>
   <tr>
-    <td>Allfällige Probleme Nimbra</td>
+    <td>Probleme<br>Nimbra</td>
     <td style="text-align:center"><input type="checkbox"> Nicht OK</td>
     <td contenteditable="true"></td>
   </tr>
-  <tr><td>Bemerkungen</td><td colspan="2" contenteditable="true"></td></tr>
+  <tr><td>Notiz</td><td colspan="2" contenteditable="true"></td></tr>
 </table>
 
 
-<!-- ► Multi --------------------------------------------------------------- -->
+<!-- ► Multi --------------------------------------------------------------- -->
 <h3>Multi</h3>
 <table>
   <tr>
@@ -79,18 +80,18 @@ window.DEBRIEFING_FORM_HTML = `
     <th>Grafik</th>
     <td style="text-align:center"><input type="checkbox"> Nicht OK</td>
   </tr>
-  <tr><td>Bemerkungen</td><td contenteditable="true"></td></tr>
+  <tr><td>Notiz</td><td contenteditable="true"></td></tr>
 </table>
 
 
-<!-- ► Interview‑Kameras ---------------------------------------------------- -->
+<!-- ► Interview‑Kameras ---------------------------------------------------- -->
 <h3>Interview Kameras</h3>
 <table>
 <thead><tr>
-  <th style="width:40mm">Interview Kam.</th>
-  <th style="width:15mm">Multi</th>
-  <th style="width:25mm">unilat/LiveU</th>
-  <th>Bemerkungen</th>
+  <th style="width:28mm">Interview<br>Kam.</th>
+  <th style="width:16mm">Multi</th>
+  <th style="width:18mm">unilat/<br>LiveU</th>
+  <th>Notiz</th>
 </tr></thead>
 <tbody>
   <tr><td>blue D</td><td style="text-align:center"><input type="checkbox"></td><td style="text-align:center"><input type="checkbox"></td><td contenteditable="true"></td></tr>
@@ -99,36 +100,36 @@ window.DEBRIEFING_FORM_HTML = `
   <tr><td>RTS</td>   <td style="text-align:center"><input type="checkbox"></td><td style="text-align:center"><input type="checkbox"></td><td></td></tr>
   <tr><td>RSI</td>   <td style="text-align:center"><input type="checkbox"></td><td style="text-align:center"><input type="checkbox"></td><td></td></tr>
 
-  <tr><td>Inhouse TV</td><td colspan="2" style="text-align:center"><input type="checkbox"> nicht OK</td><td></td></tr>
-  <tr><td>Kommentatoren­positionen</td><td colspan="2" style="text-align:center"><input type="checkbox"> nicht OK</td><td></td></tr>
-  <tr><td>Zusammenarbeit blue</td><td colspan="2" style="text-align:center"><input type="checkbox"> nicht OK</td><td></td></tr>
+  <tr><td>Inhouse<br>TV</td>     <td colspan="2" style="text-align:center"><input type="checkbox"> nicht OK</td><td></td></tr>
+  <tr><td>Pos.<br>Komms</td>     <td colspan="2" style="text-align:center"><input type="checkbox"> nicht OK</td><td></td></tr>
+  <tr><td>Koop.<br>blue</td>     <td colspan="2" style="text-align:center"><input type="checkbox"> nicht OK</td><td></td></tr>
 
-  <tr><td>Bemerkungen</td><td colspan="3" contenteditable="true"></td></tr>
+  <tr><td>Notiz</td><td colspan="3" contenteditable="true"></td></tr>
 </tbody>
 </table>
 
 
-<!-- ► Leitungen / Signal --------------------------------------------------- -->
+<!-- ► Leitungen / Signal --------------------------------------------------- -->
 <h3>Leitungen / Signal</h3>
 <table>
   <tr>
-    <th>Glasfaser Orion/SRG</th>
+    <th>Glasfaser Orion/SRG</th>
     <td style="text-align:center"><input type="checkbox"> Nicht OK</td>
   </tr>
   <tr>
-    <th>Glasfaser Starnet/blue</th>
+    <th>Glasfaser Starnet/blue</th>
     <td style="text-align:center"><input type="checkbox"> Nicht OK</td>
   </tr>
-  <tr><td>Bemerkungen</td><td contenteditable="true"></td></tr>
+  <tr><td>Notiz</td><td contenteditable="true"></td></tr>
 </table>
 
 
-<!-- ► Mitschnitte ---------------------------------------------------------- -->
+<!-- ► Mitschnitte ---------------------------------------------------------- -->
 <h3>Mitschnitte</h3>
 <table>
-  <thead><tr><th style="width:40mm"></th><th>Anzahl</th><th>Bemerkungen</th></tr></thead>
-  <tr><td>Sonstige Mitschnitte</td><td contenteditable="true">-</td><td contenteditable="true"></td></tr>
-  <tr><td>Bemerkungen</td><td colspan="2" contenteditable="true"></td></tr>
+  <thead><tr><th style="width:40mm"></th><th>Anzahl</th><th>Notiz</th></tr></thead>
+  <tr><td>Sonstige<br>Mitschnitte</td><td contenteditable="true">-</td><td contenteditable="true"></td></tr>
+  <tr><td>Notiz</td><td colspan="2" contenteditable="true"></td></tr>
 </table>
 
 <p class="yellowNote">

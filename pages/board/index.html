@@ -22,13 +22,15 @@
     <script src="../../shared/js/header.js"></script>
     <script src="./board_templates.js"></script>
     <script src="../../shared/js/board_template_debriefing.js"></script>
+    <!-- ► NEU: Graphics‑Rapport‑Template -->
+    <script src="../../shared/js/board_template_graphics.js"></script>
     <script src="./board.js"></script>
     <script src="../../shared/js/board_settings.js"></script>
     <!-- PDF‑Export‑Logik wird später dynamisch in board.js geladen -->
 </head>
 
 <body onload="setHeader(); init()" onclick="closeAllDropdowns(event); resetAllMoveOpen()"
-      onkeydown="setShift(event)" onkeyup=" unsetShift(event)">
+      onkeydown="setShift(event)" onkeyup="unsetShift(event)">
     <header class="main_header w_full">
         <img onclick="redirectToDashboard()" src="../../assets/icons/bbm.png" alt="" height="48">
         <div id="head_content_right" class="d_flex_cc_gm head_content_right"></div>

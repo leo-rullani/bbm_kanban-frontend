@@ -302,10 +302,8 @@ function renderDetailTaskComments() {
 /*  GRAPHICS–BOARD DETECTION                                          */
 /* ------------------------------------------------------------------ */
 /**
- * Returns true if the current board is the new “Graphics Rapport” board.
- * We use a simple title heuristic (“Graphics –” or “GFX‑RAPPORT”).
- *
- * @returns {boolean}
+ * Prüft, ob das aktuell geöffnete Board der neue Graphics‑Rapport ist:
+ * Erkannt wird es per Titel‑Heuristik (“Graphics …” oder “GFX‑Rapport”).
  */
 function isGraphicsRapportBoard() {
     if (!currentBoard?.title) return false;
@@ -317,9 +315,8 @@ function isGraphicsRapportBoard() {
 /*  DEFAULT‑FORMULAR INJECTOR                                         */
 /* ------------------------------------------------------------------ */
 /**
- * Assigns the pre‑generated Graphics‑Rapport HTML snippet to
- * `currentTask.description` when the board is a Graphics board.
- * Fallbacks gracefully if the template isn’t loaded yet.
+ * Injiziert das vorbereitete Graphics‑Rapport‑HTML in
+ * `currentTask.description`, sofern das Board ein Graphics‑Board ist.
  */
 function setDefaultDescriptionForGraphics() {
     if (isGraphicsRapportBoard() && window.GRAPHICS_RAPPORT_FORM_HTML) {
@@ -328,28 +325,32 @@ function setDefaultDescriptionForGraphics() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  REPLACED openCreateTaskDialog()                                   */
+/*  ERSETZTE openCreateTaskDialog()                                   */
 /* ------------------------------------------------------------------ */
 /**
- * Opens the dialog to create a new task.
- * Adds support for:
- *   • Debriefing‑Boards   → window.DEBRIEFING_FORM_HTML
- *   • Graphics‑Boards     → window.GRAPHICS_RAPPORT_FORM_HTML  ← NEU
+ * Öffnet den Dialog “Add Task”.
+ * Unterstützt jetzt beide Spezial‑Boards:
+ *   • Debriefing‑Boards   → `window.DEBRIEFING_FORM_HTML`
+ *   • Graphics‑Boards     → `window.GRAPHICS_RAPPORT_FORM_HTML`
  *
- * @param {string} [status] Optional status preset (“to‑do”, “in‑progress”…)
+ * @param {string} [status] Vorgabe‑Status (“to‑do”, “in‑progress” …)
  */
 function openCreateTaskDialog(status) {
     cleanCurrentTask();
     currentTask.status = status || 'to-do';
 
-    // Debriefing‑Spezialfall
-    if (currentBoard.title === 'Debriefing – Swiss Football League'
-        && window.DEBRIEFING_FORM_HTML) {
+    /* ---------- Spezial‑Formulare -------------------------------- */
+    // 1) Swiss‑Football‑League Debriefing
+    if (
+        currentBoard.title === 'Debriefing – Swiss Football League' &&
+        window.DEBRIEFING_FORM_HTML
+    ) {
         currentTask.description = window.DEBRIEFING_FORM_HTML;
     }
 
-    // Graphics‑Spezialfall  ← ‼️ das ist entscheidend
+    // 2) Graphics‑Rapport (NEU)
     setDefaultDescriptionForGraphics();
+    /* -------------------------------------------------------------- */
 
     changeCurrentDialog('create_edit_task_dialog');
     toggleOpenId('dialog_wrapper');
@@ -424,12 +425,19 @@ function fillEditCreateTaskDialog(type) {
     setTaskCreateDropdownPrioHeader()
     setSelectAddEditTaskStatusDropdown()
 
-    /* ---------- only once: Blur‑Autosave ---------- */
+/* board.js ----------------------------------------------------------- */
 const desc = document.getElementById('create_edit_task_description');
 if (!desc.dataset.listenerSet) {
     desc.addEventListener('blur', async e => {
-        if (document.getElementById('create_edit_task_dialog').getAttribute('dialog-type') === 'edit') {
-            await patchData(TASKS_URL + currentTask.id + '/', { description: e.target.innerHTML });
+        freezeFormValues(e.currentTarget); // 🆕 wichtig!
+        if (
+            document.getElementById('create_edit_task_dialog')
+                    .getAttribute('dialog-type') === 'edit'
+        ) {
+            await patchData(
+                `${TASKS_URL}${currentTask.id}/`,
+                { description: e.currentTarget.innerHTML }
+            );
         }
     }, true);
     desc.dataset.listenerSet = 'true';
@@ -632,22 +640,25 @@ async function submitCreateTask(event) {
  * @returns {Object|boolean} The new or updated task object if valid, otherwise false.
  */
 function getValidatedTask() {
-    let titleRef = document.getElementById('create_edit_task_title_input')
-    let dateRef = document.getElementById('create_edit_task_date_input')
+    let titleRef = document.getElementById('create_edit_task_title_input');
+    let dateRef = document.getElementById('create_edit_task_date_input');
+    const descElem = document.getElementById('create_edit_task_description');
+    freezeFormValues(descElem); // ← Neu: Beschreibung einfrieren
+
     if (validateCreateEditTaskTitle(titleRef) && validateCreateEditTaskDueDate(dateRef)) {
         let updatedTask = {
             "board": currentBoard.id,
             "title": titleRef.value,
-            "description": document.getElementById('create_edit_task_description').innerHTML,
+            "description": descElem.innerHTML, // ← Jetzt korrekt eingebunden
             "status": currentTask.status,
             "priority": currentTask.priority,
             "reviewer_id": currentTask.reviewer ? currentTask.reviewer.id : null,
             "assignee_id": currentTask.assignee ? currentTask.assignee.id : null,
             "due_date": dateRef.value
-        }
-        return updatedTask
+        };
+        return updatedTask;
     }
-    return false
+    return false;
 }
 
 /**
@@ -947,4 +958,50 @@ function triggerDateInput(element) {
 async function openEditBoardDialog() {
     document.getElementById("edit_board_dialog").setAttribute("current_dialog", "true")
     openBoardSettingsDialog(currentBoard.id)
+}
+
+/* ------------------------------------------------------------------ */
+/*  Serialisiert Inputs & Selects in der Description‑Area             */
+/* ------------------------------------------------------------------ */
+/**
+ * Schreibt den aktuellen Zustand aller Formular‑Elemente
+ * (checkbox, radio, select, input[type=text|date], textarea)
+ * als Attribute in das DOM, damit innerHTML ihn enthält.
+ *
+ * @param {HTMLElement} root – der Editor‑Container
+ */
+function freezeFormValues(root){
+    if(!root) return;
+
+    // ► Checkboxen & Radiobuttons
+    root.querySelectorAll('input[type="checkbox"],input[type="radio"]')
+        .forEach(inp=>{
+            if(inp.checked){
+                inp.setAttribute('checked','');
+            }else{
+                inp.removeAttribute('checked');
+            }
+        });
+
+    // ► Text‑, Zahl‑, Date‑Inputs
+    root.querySelectorAll('input:not([type="checkbox"]):not([type="radio"])')
+        .forEach(inp=>{
+            inp.setAttribute('value', inp.value);
+        });
+
+    // ► Select‑Felder
+    root.querySelectorAll('select').forEach(sel=>{
+        Array.from(sel.options).forEach(opt=>{
+            if(opt.selected){
+                opt.setAttribute('selected','');
+            }else{
+                opt.removeAttribute('selected');
+            }
+        });
+    });
+
+    // ► Textareas
+    root.querySelectorAll('textarea').forEach(ta=>{
+        ta.textContent = ta.value || ta.textContent;
+    });
 }

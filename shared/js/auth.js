@@ -188,3 +188,4 @@ function validateSignUp() {
     const elementWithErrorFalse = form.querySelector('[error="true"]');
     return elementWithErrorFalse == null
 }
+

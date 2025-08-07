@@ -3,7 +3,6 @@
 /* ==================================================================== */
 *, *::before, *::after{                 /* ★ Änderung: Box‑Sizing fix   */
     box-sizing: border-box;
-    margin: 5px;
 }
 
 .divider_yellow{
@@ -342,4 +341,58 @@ main{
 /* ► Firefox */
 .rapport_date_input{
     -moz-appearance:textfield;
+}
+
+/* ───────── Portfolio‑Footer (Marquee 3.0) ───────── */
+.portfolio-box{
+    width:100%;
+    overflow:hidden;
+    background-color:var(--bg-color-dark);
+    padding:8px 24px;             /* linker = rechter Rand */
+}
+
+.portfolio-track{
+    --marquee-duration:40s;       /* wird per JS gesetzt   */
+    --marquee-distance:100%;
+
+    display:flex;
+    gap:32px;
+    list-style:none;
+    margin:0;
+    padding:0;
+    white-space:nowrap;
+    animation:portfolio-marquee var(--marquee-duration) linear infinite;
+}
+
+.portfolio-track li{
+    flex:0 0 auto;
+    white-space:nowrap;
+    font-size:14px;
+    color:var(--font_white_color);
+}
+
+/* Gelb‑Variante für abwechselnde Items */
+.portfolio-item-alt{
+    color:rgba(255,231,135,1);
+}
+
+/* Banner‑Item („OUR PORTFOLIO“) */
+.portfolio-banner{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-weight:600;
+    color:var(--btn-prime-active-color);
+}
+
+/* Icon im Banner */
+.portfolio-icon{
+    width:18px;
+    height:18px;
+    fill:currentColor;
+}
+
+@keyframes portfolio-marquee{
+    0%   { transform:translateX(0); }
+    100% { transform:translateX(calc(-1 * var(--marquee-distance))); }
 }

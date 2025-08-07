@@ -1005,3 +1005,56 @@ function freezeFormValues(root){
         ta.textContent = ta.value || ta.textContent;
     });
 }
+
+/* ───────── Our‑Portfolio Marquee ───────── */
+function initPortfolioMarquee(){
+    const track = document.querySelector('.portfolio-track');
+    if(!track) return;
+
+    /* 1. Original‑Items sammeln */
+    const originalItems = Array.from(track.children).map(li => li.textContent.trim());
+
+    /* 2. Track leeren & neu aufbauen  */
+    track.innerHTML = '';
+    let counter = 0;
+
+    const bannerHTML = `
+        <span class="portfolio-banner">
+            <svg class="portfolio-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path d="M20 6h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v2H4c-1.1 0-2 .9-2 
+                       2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zM10 4h4v2h-4V4zm10 
+                       14H4V8h16v10z"/>
+            </svg>
+            OUR PORTFOLIO
+        </span>`;
+
+    originalItems.forEach((txt, idx) => {
+        /* Event‑Item anlegen */
+        const li = document.createElement('li');
+        li.textContent = txt;
+        if(idx % 2 === 1) li.classList.add('portfolio-item-alt');   // abwechselnd gelb
+        track.appendChild(li);
+        counter++;
+
+        /* Nach jedem 7. Inhalt → Banner einfügen */
+        if(counter % 7 === 0){
+            const bannerLi = document.createElement('li');
+            bannerLi.innerHTML = bannerHTML;
+            track.appendChild(bannerLi);
+        }
+    });
+
+    /* 3. Duplizieren → endloser Loop */
+    track.innerHTML += track.innerHTML;
+
+    /* 4. Marquee‑Variablen setzen */
+    const SPEED = 60;                       // px / sec
+    const trackWidth = track.scrollWidth / 2;
+    const duration = trackWidth / SPEED;
+
+    track.style.setProperty('--marquee-distance', `${trackWidth}px`);
+    track.style.setProperty('--marquee-duration', `${duration}s`);
+}
+
+/* nach DOM‑Load */
+window.addEventListener('load', initPortfolioMarquee);

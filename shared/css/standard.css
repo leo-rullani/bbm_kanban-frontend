@@ -162,6 +162,10 @@ main {
     gap: 32px;
 }
 
+.d_flex_cs_gl {
+    margin-top: -24px;
+}
+
 .d_flex_cc_gxl,
 .d_flex_cs_gxl,
 .d_flex_sc_gxl,

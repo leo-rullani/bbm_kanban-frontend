@@ -93,13 +93,14 @@ async function getReviewerTasks() {
 }
 
 /**
- * Renders the entire dashboard UI, including welcome message, urgent tasks, charts, board list, and task list.
+ * Renders the entire dashboard UI, including welcome message, urgent tasks,
+ * charts, board list, and task list.
  */
-function renderDashboard(){
+function renderDashboard() {
     renderWelcomeMessage();
-    renderUrgentTask()
-    let progress = currentAssignedTickets.filter(task => task.status == "done" ).length / currentAssignedTickets.length * 100;
-    drawWaveChart(progress); 
+    renderUrgentTask();
+    let progress = currentAssignedTickets.filter(task => task.status == "done").length / currentAssignedTickets.length * 100;
+    drawWaveChart(progress);
     drawPieChart(currentAssignedTickets);
     renderBoardList();
     renderMemberAndTaskCount();
@@ -107,24 +108,38 @@ function renderDashboard(){
 }
 
 /**
- * Renders a personalized welcome message for the authenticated user in the dashboard UI.
+ * Renders a personalized greeting for the authenticated user in the dashboard UI.
+ * Uses the current hour to choose between:
+ *   - Good morning   (05–11)
+ *   - Good afternoon (12–16)
+ *   - Good evening   (17–21)
+ *   - Good night     (22–04)
+ * Keeps the handshake icon in front of the greeting.
  */
-function renderWelcomeMessage(){
-    let user = getAuthUser();
-    document.getElementById('welcome_message').innerHTML = `<img src="../../assets/icons/shake_hands.png" alt=""><span class="font_white_color"> Welcome </span>${user.fullname}!`
+function renderWelcomeMessage() {
+    const user  = getAuthUser();
+    const hour  = new Date().getHours();
+
+    let greeting = "Good night";                 // default (22–04)
+    if (hour >= 5  && hour < 12) greeting = "Good morning";
+    else if (hour >= 12 && hour < 17) greeting = "Good afternoon";
+    else if (hour >= 17 && hour < 22) greeting = "Good evening";
+
+    document.getElementById('welcome_message').innerHTML =
+        `<img src="../../assets/icons/shake_hands.png" alt=""><span class="font_white_color"> ${greeting}, </span>${user.fullname}!`;
 }
 
 /**
  * Renders the list of boards available to the user in the dashboard UI.
  * Displays a message if no boards are available.
  */
-function renderBoardList(){
+function renderBoardList() {
     let htmlText = "";
     currentBoards.forEach(board => {
-        htmlText += `<li><a class="link" href="../../pages/board/?id=${board.id}">${board.title}</a></li>`
+        htmlText += `<li><a class="link" href="../../pages/board/?id=${board.id}">${board.title}</a></li>`;
     });
-    if(currentBoards.length <= 0){
-        htmlText = `<h3 class="font_prime_color">No boards available</h3>`
+    if (currentBoards.length <= 0) {
+        htmlText = `<h3 class="font_prime_color">No boards available</h3>`;
     }
     document.getElementById('dashboard_boardlist').innerHTML = htmlText;
 }
@@ -282,3 +297,56 @@ function formatDate(isoDate) {
 function redirectToBoards(){
     window.location.href = "../../pages/boards/"
 }
+
+/* ───────── Our‑Portfolio Marquee ───────── */
+function initPortfolioMarquee(){
+    const track = document.querySelector('.portfolio-track');
+    if(!track) return;
+
+    /* 1. Original‑Items sammeln */
+    const originalItems = Array.from(track.children).map(li => li.textContent.trim());
+
+    /* 2. Track leeren & neu aufbauen  */
+    track.innerHTML = '';
+    let counter = 0;
+
+    const bannerHTML = `
+        <span class="portfolio-banner">
+            <svg class="portfolio-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path d="M20 6h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v2H4c-1.1 0-2 .9-2 
+                       2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zM10 4h4v2h-4V4zm10 
+                       14H4V8h16v10z"/>
+            </svg>
+            OUR PORTFOLIO
+        </span>`;
+
+    originalItems.forEach((txt, idx) => {
+        /* Event‑Item anlegen */
+        const li = document.createElement('li');
+        li.textContent = txt;
+        if(idx % 2 === 1) li.classList.add('portfolio-item-alt');   // abwechselnd gelb
+        track.appendChild(li);
+        counter++;
+
+        /* Nach jedem 7. Inhalt → Banner einfügen */
+        if(counter % 7 === 0){
+            const bannerLi = document.createElement('li');
+            bannerLi.innerHTML = bannerHTML;
+            track.appendChild(bannerLi);
+        }
+    });
+
+    /* 3. Duplizieren → endloser Loop */
+    track.innerHTML += track.innerHTML;
+
+    /* 4. Marquee‑Variablen setzen */
+    const SPEED = 60;                       // px / sec
+    const trackWidth = track.scrollWidth / 2;
+    const duration = trackWidth / SPEED;
+
+    track.style.setProperty('--marquee-distance', `${trackWidth}px`);
+    track.style.setProperty('--marquee-duration', `${duration}s`);
+}
+
+/* nach DOM‑Load */
+window.addEventListener('load', initPortfolioMarquee);

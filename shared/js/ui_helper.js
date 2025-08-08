@@ -289,11 +289,24 @@ function getParamFromUrl(param) {
 /**
  * Redirects the user to the dashboard if authenticated,
  * otherwise redirects to the login page.
+ * On boards pages, block only automatic redirects; allow manual clicks.
  */
-function redirectToDashboard() {
-    if(getAuthUserId()){
-        window.location.href = "../../pages/dashboard/";
-    } else {
-        window.location.href = "../../pages/auth/login.html";
-    }
+function redirectToDashboard(manual = false) {
+  const p = (window.location && window.location.pathname) || '';
+
+  // Block NUR Auto-Redirects auf Boards/Board-Seiten
+  if (!manual && (p.includes('/pages/boards') || p.includes('/boards') || p.includes('/pages/board') || p.includes('/board'))) {
+    return;
+  }
+
+  if (getAuthUserId()) {
+    window.location.href = "../../pages/dashboard/";
+  } else {
+    window.location.href = "../../pages/auth/login.html";
+  }
+}
+
+// Für manuelle Klicks (Header-Logo, Menü) immer explizit manuell aufrufen:
+function goDashboard() {
+  return redirectToDashboard(true);
 }

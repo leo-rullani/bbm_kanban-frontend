@@ -10,12 +10,15 @@
  */
 function getMemberListTemplate(currentBoard) {
     let listHTML = "";
+    if (!currentBoard?.members) return listHTML;
+
     for (let i = 0; i < currentBoard.members.length; i++) {
         if (i >= 4) {
-            listHTML += `<li><div class="profile_circle  color_A">+${currentBoard.members.length - 4}</div></li>`;
+            listHTML += `<li><div class="profile_circle color_A">+${currentBoard.members.length - 4}</div></li>`;
             break;
         }
-        listHTML += `<li><div class="profile_circle  color_${getInitials(currentBoard.members[i].fullname)[0]}">${getInitials(currentBoard.members[i].fullname)}</div></li>`;
+        const initials = getInitials(currentBoard.members[i].fullname);
+        listHTML += `<li><div class="profile_circle color_${initials[0]}">${initials}</div></li>`;
     }
     return listHTML;
 }
@@ -31,7 +34,8 @@ function getMemberListTemplate(currentBoard) {
  */
 function getDetailTaskPersonTemplate(member) {
     if (member) {
-        return `<div class="profile_circle color_${getInitials(member.fullname)[0]}">${getInitials(member.fullname)}</div>
+        const initials = getInitials(member.fullname);
+        return `<div class="profile_circle color_${initials[0]}">${initials}</div>
                 <p>${member.fullname}</p>`;
     } else {
         return `<img src="../../assets/icons/face_icon.svg" alt="">
@@ -53,21 +57,25 @@ function getDetailTaskPersonTemplate(member) {
  * @returns {string} HTML string representing a single comment entry.
  */
 function getSingleCommmentTemplate(comment) {
-    let delete_btn = comment.author == getAuthFullname() ? `<img src="../../assets/icons/delete.svg" class="delete_btn" alt="" onclick="deleteComment(${comment.id})">` : "";
+    let delete_btn = comment.author == getAuthFullname()
+        ? `<img src="../../assets/icons/delete.svg" class="delete_btn" alt="" onclick="deleteComment(${comment.id})">`
+        : "";
     let userInitials = getInitials(comment.author);
-    return `        <article class="comment_wrapper d_flex_ss_gm w_full">
-                        <div class="profile_circle color_${userInitials[0]}">${userInitials}</div>
-                        <div class="d_flex_sc_gs f_d_c w_full">
-                            <header class="d_flex_sc_gm w_full d_sb">
-                                <div class="d_flex_sc_gm">
-                                    <h4>${comment.author}</h4>
-                                    <p>${timeDifference(comment.created_at)}</p>
-                                </div>
-                                ${delete_btn}
-                            </header>
-                            <p class="w_full">${comment.content}</p>
-                        </div>    
-                    </article>`;
+
+    return `
+        <article class="comment_wrapper d_flex_ss_gm w_full">
+            <div class="profile_circle color_${userInitials[0]}">${userInitials}</div>
+            <div class="d_flex_sc_gs f_d_c w_full">
+                <header class="d_flex_sc_gm w_full d_sb">
+                    <div class="d_flex_sc_gm">
+                        <h4>${comment.author}</h4>
+                        <p>${timeDifference(comment.created_at)}</p>
+                    </div>
+                    ${delete_btn}
+                </header>
+                <p class="w_full">${comment.content}</p>
+            </div>
+        </article>`;
 }
 
 /**
@@ -86,9 +94,12 @@ function getTaskCreateMemberListEntrieTemplate(type, currentBoard) {
                         <img src="../../assets/icons/face_icon.svg" alt="">
                         <p>unassigned</p>
                     </li>`;
+    if (!currentBoard?.members) return listHtml;
+
     currentBoard.members.forEach(member => {
+        const initials = getInitials(member.fullname);
         listHtml += `<li onclick="setMemberAs('${member.id}', '${type}'); toggleDropdown(this, event)">
-                        <div class="profile_circle color_${getInitials(member.fullname)[0]}">${getInitials(member.fullname)}</div>
+                        <div class="profile_circle color_${initials[0]}">${initials}</div>
                         <p>${member.fullname}</p>
                     </li>`;
     });
@@ -100,33 +111,45 @@ function getTaskCreateMemberListEntrieTemplate(type, currentBoard) {
  * Generates the HTML template for a task card on the Kanban board column.
  *
  * Displays the task's title, priority icon, assignee (profile circle or default icon),
- * description, and the move button.
+ * a short preview of the description (HTML stripped), an optional PDF button (only for SFL-Debriefing boards),
+ * and the move button.
  * Clicking the card opens the task detail dialog.
  *
  * @param {Object} task - The task object.
  * @param {number} task.id - The unique identifier of the task.
  * @param {string} task.title - The title of the task.
- * @param {string} task.description - The description of the task.
+ * @param {string} task.description - The description (can contain HTML).
  * @param {Object|null} task.assignee - The assignee object, or null if unassigned.
  * @param {string} [task.assignee.fullname] - Full name of the assignee (if present).
  * @param {string} task.priority - Priority level (e.g., "high", "medium", "low").
  * @returns {string} HTML string representing the task card in the board column.
  */
 function getBoardCardTemplate(task) {
-    let assignee_html = task.assignee ?
-        `<div class="profile_circle color_${getInitials(task.assignee.fullname)[0]}">${getInitials(task.assignee.fullname)}</div>` :
-        `<img src="../../assets/icons/face_icon.svg" alt="">`;
-    return `            <li class="column_card" onclick="openTaskDetailDialog(${task.id})">
-                            <header class="column_card_header">
-                                <h4 class="font_white_color">${task.title}</h4>
-                                <div class="d_flex_sc_gm">
-                                    <img src="../../assets/icons/${task.priority}_prio_colored.svg" alt="">
-                                    ${assignee_html}
-                                </div>
-                            </header>
-                            <p class="column_card_content font_white_color">${task.description}</p>
-                            ${getBoardCardMoveBtnTemplate(task)}
-                        </li>`;
+    let assignee_html = task.assignee
+        ? `<div class="profile_circle color_${getInitials(task.assignee.fullname)[0]}">${getInitials(task.assignee.fullname)}</div>`
+        : `<img src="../../assets/icons/face_icon.svg" alt="">`;
+
+    const pdfBtnHtml = isSflDebriefBoard()
+        ? `<button type="button"
+                   class="std_btn btn_prime d_flex_sc_gs"
+                   onclick="exportTaskPdfFromCard(event, ${task.id})">
+                <span>PDF</span>
+           </button>`
+        : '';
+
+    return `
+        <li class="column_card" onclick="openTaskDetailDialog(${task.id})">
+            <header class="column_card_header">
+                <h4 class="font_white_color">${task.title}</h4>
+                <div class="d_flex_sc_gm">
+                    ${pdfBtnHtml}
+                    <img src="../../assets/icons/${task.priority}_prio_colored.svg" alt="">
+                    ${assignee_html}
+                </div>
+            </header>
+            <p class="column_card_content font_white_color">${safePreview(task.description, 160)}</p>
+            ${getBoardCardMoveBtnTemplate(task)}
+        </li>`;
 }
 
 /**
@@ -145,17 +168,77 @@ function getBoardCardMoveBtnTemplate(task) {
     let currentStatusIndex = statii.indexOf(task.status);
     let moveBtns = "";
     if (currentStatusIndex > 0) {
-        moveBtns += `<button onclick="modifyTaskStatus(${task.id}, '${statii[currentStatusIndex-1]}')">${statii[currentStatusIndex-1]}<img class="rotate_half" src="../../assets/icons/arrow_forward.svg" alt="" srcset=""></button>`;
+        moveBtns += `<button onclick="modifyTaskStatus(${task.id}, '${statii[currentStatusIndex-1]}')">
+                        ${statii[currentStatusIndex-1]}
+                        <img class="rotate_half" src="../../assets/icons/arrow_forward.svg" alt="">
+                     </button>`;
     }
     if (currentStatusIndex < statii.length - 1) {
-        moveBtns += `<button onclick="modifyTaskStatus(${task.id}, '${statii[currentStatusIndex+1]}')">${statii[currentStatusIndex+1]} <img src="../../assets/icons/arrow_forward.svg" alt="" srcset=""></button>`;
+        moveBtns += `<button onclick="modifyTaskStatus(${task.id}, '${statii[currentStatusIndex+1]}')">
+                        ${statii[currentStatusIndex+1]}
+                        <img src="../../assets/icons/arrow_forward.svg" alt="">
+                     </button>`;
     }
 
-    return `<div move-open="false" class="move_btn" onclick="toggleMoveOpen(this); stopProp(event)">
-        <img src="../../assets/icons/swap_horiz.svg" alt="">
-        <div class=" d_flex_sc_gs f_d_c pad_s">
-            <p class="font_prime_color ">Move to</p>
-            ${moveBtns}
-        </div>
-    </div>`;
+    return `
+        <div move-open="false" class="move_btn" onclick="toggleMoveOpen(this); stopProp(event)">
+            <img src="../../assets/icons/swap_horiz.svg" alt="">
+            <div class=" d_flex_sc_gs f_d_c pad_s">
+                <p class="font_prime_color ">Move to</p>
+                ${moveBtns}
+            </div>
+        </div>`;
+}
+
+/* ====================== Helper (neu) ====================== */
+
+/** true, wenn das aktuelle Board das SFL‑Debriefing ist */
+function isSflDebriefBoard() {
+    const t = (window.currentBoard?.title || '').toLowerCase();
+    return t.includes('debriefing') && (t.includes('swiss football league') || t.includes('sfl'));
+}
+
+/** Holt eine kurze, saubere Vorschau (Text) aus HTML – ohne <style>/<script> Inhalte */
+function safePreview(html, maxLen) {
+    if (!html) return '';
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+
+    // Style-/Script-Inhalte vollständig entfernen, damit keine CSS-Regeln im Preview landen
+    tmp.querySelectorAll('style,script').forEach(n => n.remove());
+
+    let text = (tmp.textContent || tmp.innerText || '').replace(/\s+/g, ' ').trim();
+    if (!text) return '';
+    const limit = Math.max(0, maxLen || 180);
+    return text.length <= limit ? text : text.slice(0, limit - 1) + '…';
+}
+
+/**
+ * Exportiert direkt aus der Karte eine Task als PDF (nur SFL).
+ * Öffnet ein neues Tab mit Print‑Dialog (User kann „Als PDF speichern“ wählen).
+ */
+async function exportTaskPdfFromCard(ev, taskId) {
+    ev.stopPropagation();
+    ev.preventDefault();
+
+    try {
+        const task = (typeof getTaskById === 'function')
+            ? getTaskById(taskId)
+            : (window.currentBoard?.tasks || []).find(t => t.id == taskId);
+        if (!task) return;
+
+        const html = task.description || '';
+        const baseTitle = task.title || 'debriefing';
+
+        const mod = await import('./pdf_export.js'); // gleiche Ebene wie board_templates.js
+        if (typeof mod.exportDebriefingTaskPdf === 'function') {
+            // Logo-Position kannst du über das 3. Argument steuern (z.B. { logoPos: 'bottom-right' })
+            mod.exportDebriefingTaskPdf(html, baseTitle);
+        } else if (typeof mod.downloadDebriefingPdf === 'function') {
+            // Fallback: Board‑weiter Export (alle Tasks)
+            mod.downloadDebriefingPdf();
+        }
+    } catch (e) {
+        console.error('PDF export failed:', e);
+    }
 }

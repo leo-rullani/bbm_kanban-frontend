@@ -26,7 +26,7 @@
     <script src="../../shared/js/board_template_graphics.js"></script>
     <script src="./board.js"></script>
     <script src="../../shared/js/board_settings.js"></script>
-    <!-- PDF‑Export‑Logik wird später dynamisch in board.js geladen -->
+    <!-- PDF‑Export‑Logik wird nun pro Task in board.js dynamisch geladen -->
 </head>
 
 <body onload="setHeader(); init()" onclick="closeAllDropdowns(event); resetAllMoveOpen()"
@@ -69,14 +69,14 @@
                     </div>
                 </form>
 
-                <!-- ▼ PDF‑DOWNLOAD‑BUTTON: wird per JS sichtbar, wenn Board = SFL‑Debriefing -->
+                <!-- ▼ PDF-Button im Header deaktiviert: Export erfolgt im Task-Dialog -->
                 <button id="pdf-download-btn"
                         class="std_btn btn_prime d_flex_sc_gs"
                         style="display:none"
-                        onclick="downloadDebriefingPdf()">
+                        type="button" aria-hidden="true">
                     <p>PDF herunterladen</p>
                 </button>
-                <!-- ▲ PDF‑DOWNLOAD‑BUTTON -->
+                <!-- ▲ PDF-Button im Header deaktiviert -->
 
                 <button onclick="openEditBoardDialog()" class="std_btn d_flex_sc_gs board_settings_btn">
                     <img src="../../assets/icons/settings.svg" alt="">
@@ -209,10 +209,11 @@
                         <!-- PDF‑Button: wird per board.js nur im Debriefing‑Board sichtbar geschaltet -->
                          <button id="task-pdf-btn"
                          style="display:none;margin-right:8px"
-                         class="close_btn d_flex_cc_gs"
+                         class="std_btn btn_prime pad_s d_flex_cc_gs"
                          onclick="exportDebriefingTaskPdf()">
                          PDF
                         </button>
+
                         <button dialog-type="sub_edit" onclick="deleteCurrentTask()" class="close_btn d_flex_cc_gs">
                             <img src="../../assets/icons/delete.svg" alt="">
                         </button>

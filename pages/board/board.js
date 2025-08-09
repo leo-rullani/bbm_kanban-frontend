@@ -84,8 +84,7 @@ function cleanCurrentTask() {
 async function init() {
     await setBoard();
 
-    /* ❶ Board‑Objekt im globalen Scope ablegen,
-       damit pdf_export.js es sicher findet                */
+    // Board-Objekt global bereitstellen (für evtl. andere Tools)
     window.currentBoard = currentBoard;
 
     cleanCurrentTask();
@@ -93,14 +92,9 @@ async function init() {
     renderMemberList();
     renderTitle();
 
-    /* ---------- PDF‑EXPORT HOOK ---------- */
-    if (currentBoard.title === 'Debriefing – Swiss Football League') {
-        document.getElementById('pdf-download-btn').style.display = 'none';
-
-        const pdfMod = await import('./pdf_export.js');   // gleiches Verzeichnis
-        window.downloadDebriefingPdf = pdfMod.downloadDebriefingPdf;
-    }
-    /* -------- END PDF‑EXPORT HOOK -------- */
+    // PDF-Download im Seiten-Header ausblenden (Export erfolgt pro Task im Dialog)
+    const hdrBtn = document.getElementById('pdf-download-btn');
+    if (hdrBtn) hdrBtn.style.display = 'none';
 
     if (getParamFromUrl('task_id')) openTaskDetailDialog(getParamFromUrl('task_id'));
 }
@@ -186,6 +180,9 @@ function renderDetailTask() {
     renderDetailTaskDueDate()
     renderDetailTaskPriority()
     renderDetailTaskComments()
+
+    // ▼ NEU: PDF-Buttons (inkl. Detail-Button) binden/anzeigen
+    bindPdfButtonsForSfl();
 }
 
 /**
@@ -425,41 +422,83 @@ function fillEditCreateTaskDialog(type) {
     setTaskCreateDropdownPrioHeader()
     setSelectAddEditTaskStatusDropdown()
 
-/* board.js ----------------------------------------------------------- */
-const desc = document.getElementById('create_edit_task_description');
-if (!desc.dataset.listenerSet) {
-    desc.addEventListener('blur', async e => {
-        freezeFormValues(e.currentTarget); // 🆕 wichtig!
-        if (
-            document.getElementById('create_edit_task_dialog')
-                    .getAttribute('dialog-type') === 'edit'
-        ) {
-            await patchData(
-                `${TASKS_URL}${currentTask.id}/`,
-                { description: e.currentTarget.innerHTML }
-            );
-        }
-    }, true);
-    desc.dataset.listenerSet = 'true';
+    // Autosave/Freeze bei Blur (wie gehabt)
+    const desc = document.getElementById('create_edit_task_description');
+    if (!desc.dataset.listenerSet) {
+        desc.addEventListener('blur', async e => {
+            freezeFormValues(e.currentTarget);
+            if (document.getElementById('create_edit_task_dialog').getAttribute('dialog-type') === 'edit') {
+                await patchData(`${TASKS_URL}${currentTask.id}/`, { description: e.currentTarget.innerHTML });
+            }
+        }, true);
+        desc.dataset.listenerSet = 'true';
+    }
+
+    // ▼ NEU: PDF-Buttons (Edit/Detail) passend zum Board-Typ schalten
+    bindPdfButtonsForSfl();
 }
 
-/* ---------- PDF‑Button Sichtbarkeit + Callback ---------- */
-const pdfBtn = document.getElementById('task-pdf-btn');
-if (currentBoard.title === 'Debriefing – Swiss Football League') {
-    pdfBtn.style.display = 'none';
-    if (!window.exportDebriefingTaskPdf) {
-        // dynamisch den Exporter nachladen
-        import('../../shared/js/pdf_export_task.js').then(mod => {
-            window.exportDebriefingTaskPdf = () =>
-                mod.taskHtmlToPdf(
-                    document.getElementById('create_edit_task_description').innerHTML,
-                    document.getElementById('create_edit_task_title_input').value || 'debriefing'
-                );
-        });
+    // ── Task-PDF-Button nur im SFL-Debriefing-Board anzeigen
+    const pdfBtn = document.getElementById('task-pdf-btn');
+    const title = (currentBoard?.title || '').toLowerCase();
+    const isSflDebrief = title.includes('debriefing') && (title.includes('swiss football league') || title.includes('sfl'));
+
+    if (pdfBtn) {
+        if (isSflDebrief) {
+            pdfBtn.style.display = 'inline-flex';
+
+            // Stabiler Click-Handler: vor dem Lesen Freezen, dann Neues-Tab + Print
+            window.exportDebriefingTaskPdf = async () => {
+                const descEl = document.getElementById('create_edit_task_description');
+                freezeFormValues(descEl); // Eingaben (checked/value/selected) im HTML verankern
+                const html = descEl.innerHTML;
+                const base = document.getElementById('create_edit_task_title_input').value || 'debriefing';
+
+                const mod = await import('./pdf_export.js');   // gleiche Ebene wie board.js
+                // Öffnet neues Tab mit Print-Dialog (Benutzer kann „Als PDF sichern“ wählen)
+                mod.exportDebriefingTaskPdf(html, base);
+            };
+        } else {
+            pdfBtn.style.display = 'none';
+        }
     }
-} else {
-    pdfBtn.style.display = 'none';
+
+function isSflDebriefBoardTitle() {
+    const t = (currentBoard?.title || '').toLowerCase();
+    return t.includes('debriefing') && (t.includes('swiss football league') || t.includes('sfl'));
 }
+
+
+async function exportDebriefingTaskPdf() {
+    // Erkennen, welcher Dialog offen ist
+    const editOpen = document.getElementById('create_edit_task_dialog')?.getAttribute('current_dialog') === 'true';
+    const rootId   = editOpen ? 'create_edit_task_description' : 'detail_task_description';
+
+    const el = document.getElementById(rootId);
+    if (!el) return;
+
+    // Im Edit-Dialog Eingaben "einfrieren", damit sie im HTML landen
+    if (editOpen) freezeFormValues(el);
+
+    const html      = el.innerHTML;
+    const baseTitle = document.getElementById('create_edit_task_title_input')?.value
+                   || currentTask?.title
+                   || 'debriefing';
+
+    const mod = await import('./pdf_export.js');
+    mod.exportDebriefingTaskPdf(html, baseTitle);
+}
+
+function bindPdfButtonsForSfl() {
+    const isSfl = isSflDebriefBoardTitle();
+    const editBtn   = document.getElementById('task-pdf-btn');
+    const detailBtn = document.getElementById('detail-pdf-btn');
+
+    [editBtn, detailBtn].forEach(btn => {
+        if (!btn) return;
+        btn.style.display = isSfl ? 'inline-flex' : 'none';
+        btn.onclick = exportDebriefingTaskPdf;
+    });
 }
 
 /**

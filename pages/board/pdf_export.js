@@ -10,30 +10,27 @@
  * @param {boolean} [opts.logo=true]         – BBM-Logo einblenden
  * @param {"top-left"|"top-right"|"bottom-left"|"bottom-right"} [opts.logoPos="top-left"]
  */
+// --- REPLACE: exportDebriefingTaskPdf ---
 export async function exportDebriefingTaskPdf(taskHtml, baseTitle = 'debriefing', opts = {}) {
     const options = { logo: true, logoPos: 'top-left', ...opts };
 
-    // CSS-Variablen aus der laufenden App lesen → im neuen Tab wiederverwenden
+    // CSS-Variablen aus der App übernehmen
     const vars = readCssVars([
-        '--bg-color',
-        '--bg-color-dark',
-        '--bg-color-light',
-        '--font_white_color',
-        '--font-prime-color',
-        '--btn-prime-color',
-        '--btn-prime-font-color',
-        '--card-bg-color',
-        '--card-border-color'
+        '--bg-color','--bg-color-dark','--bg-color-light',
+        '--font_white_color','--font-prime-color',
+        '--btn-prime-color','--btn-prime-font-color',
+        '--card-bg-color','--card-border-color'
     ]);
 
-    const css = getPdfCss(vars, options);
+    // ▼ Neu: wir geben getPdfCss mit, ob ein Logo oben sitzt → für korrektes Padding
+    const css = getPdfCss(vars, { logoPos: options.logoPos, hasLogo: !!options.logo });
+
     const titleText = baseTitle || 'debriefing';
     const fileBase  = sanitizeFilename(titleText) + '_' + new Date().toISOString().slice(0,10);
 
     const w = window.open('', '_blank');
     if (!w) { alert('Popup blocked – bitte Popups erlauben.'); return; }
 
-    // komplettes Dokument in neuem Tab schreiben
     w.document.open();
     w.document.write(`<!doctype html>
 <html lang="de">
@@ -56,7 +53,6 @@ export async function exportDebriefingTaskPdf(taskHtml, baseTitle = 'debriefing'
   ${options.logo ? `<img class="pdf-logo ${options.logoPos}" src="../../assets/icons/bbm.png" alt="BBM Logo">` : ''}
 
   <script>
-    // Nach dem Rendern automatisch den Druckdialog öffnen
     window.addEventListener('load', () => setTimeout(() => window.print(), 50));
   </script>
 </body>
@@ -120,46 +116,84 @@ function readCssVars(names){
  * HIER STYLST DU DAS PDF!
  * Passe diese Funktion an (Farben, Abstände, Tabellen, Logo-Größe usw.).
  */
-function getPdfCss(vars, { logoPos = 'top-left' } = {}) {
-    const posTop    = /top/.test(logoPos)    ? '10mm' : 'auto';
-    const posBottom = /bottom/.test(logoPos) ? '10mm' : 'auto';
-    const posLeft   = /left/.test(logoPos)   ? '12mm' : 'auto';
-    const posRight  = /right/.test(logoPos)  ? '12mm' : 'auto';
+// --- REPLACE: getPdfCss ---
+// --- DROP‑IN REPLACEMENT ---
+// --- REPLACE THIS FUNCTION IN pdf_export.js ---
+function getPdfCss(vars, { logoPos = 'top-left', hasLogo = true } = {}) {
+  // Position ermitteln
+  const isTop    = hasLogo && /top/.test(logoPos);
+  const isLeft   = hasLogo && /left/.test(logoPos);
+  const isRight  = hasLogo && /right/.test(logoPos);
+  const isBottom = hasLogo && /bottom/.test(logoPos);
 
-    return `
+  const posTop    = isTop    ? '10mm' : 'auto';
+  const posBottom = isBottom ? '10mm' : 'auto';
+  const posLeft   = isLeft   ? '12mm' : 'auto';
+  const posRight  = isRight  ? '12mm' : 'auto';
+
+  const logoSize      = '24mm';
+  const extraGap      = '12mm';
+  const defaultTopPad = '14mm';
+  const headerPadTop  = isTop ? `calc(${posTop} + ${logoSize} + ${extraGap})` : defaultTopPad;
+
+  return `
 :root{
-  --bg:${vars['--bg-color']};
-  --bg-dark:${vars['--bg-color-dark']};
-  --bg-light:${vars['--bg-color-light']};
-  --text:${vars['--font_white_color']};
-  --prime:${vars['--font-prime-color']};
-  --btn:${vars['--btn-prime-color']};
-  --btn-text:${vars['--btn-prime-font-color']};
-  --card:${vars['--card-bg-color']};
-  --border:${vars['--card-border-color']};
+  --bg:${vars['--bg-color'] || '#1C2739'};
+  --bg-dark:${vars['--bg-color-dark'] || '#18202E'};
+  --bg-light:${vars['--bg-color-light'] || '#213049'};
+  --text:${vars['--font_white_color'] || '#EDEDED'};
+  --prime:${vars['--font-prime-color'] || '#FFCC00'};
+  --btn:${vars['--btn-prime-color'] || '#FFCC00'};
+  --btn-text:${vars['--btn-prime-font-color'] || '#1C2739'};
+  --card:${vars['--card-bg-color'] || '#213049'};
+  --border:${vars['--card-border-color'] || '#2F4871'};
 }
 *{box-sizing:border-box}
-html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family: Mulish, Arial, Helvetica, sans-serif;line-height:1.35;font-size:12pt}
-.pdf-header{display:flex;align-items:center;justify-content:space-between;padding:12mm 14mm 0 14mm}
+html,body{
+  margin:0; padding:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family: Mulish, Arial, Helvetica, sans-serif;
+  line-height:1.35; font-size:12pt;
+}
+
+/* Header & Content */
+.pdf-header{display:flex;align-items:center;justify-content:space-between;padding:${headerPadTop} 14mm 0 14mm}
 .pdf-title{margin:0;color:var(--prime);font-size:18pt}
 .pdf-content{padding:8mm 14mm 14mm 14mm}
 
-/* Tabellen an App-Optik angelehnt */
+/* Tabellen */
 table{width:100%;border-collapse:collapse;margin:6mm 0}
 thead th{background:var(--bg-dark);color:var(--text)}
 th,td{border:1px solid var(--border);padding:3mm;text-align:left;vertical-align:top}
 tr:nth-child(even) td{background:rgba(255,255,255,0.02)}
 
-/* Bilder/Logo */
+/* ── BBM‑Logo: Screen = sticky (fixed), Print = statisch (absolute) ── */
 .pdf-logo{
-  position:fixed;
-  top:${posTop}; bottom:${posBottom}; left:${posLeft}; right:${posRight};
-  width:24mm; height:auto; opacity:.95;
+  width:${logoSize}; height:auto;
+  opacity:.95;
+  z-index:9999;
+  pointer-events:none;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 
-/* Fürs Drucken feinere Kanten */
+/* Auf Bildschirm: wirklich sticky */
+@media screen{
+  .pdf-logo{
+    position: fixed !important;
+    top:${posTop}; bottom:${posBottom};
+    left:${posLeft}; right:${posRight};
+  }
+}
+
+/* Beim Drucken/Print‑Preview: statisch auf Seite 1 */
 @media print{
-  th,td{border-color:#666}
+  .pdf-logo{
+    position: absolute !important;
+    top:${posTop}; bottom:${posBottom};
+    left:${posLeft}; right:${posRight};
+  }
 }
 `;
 }

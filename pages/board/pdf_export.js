@@ -11,6 +11,7 @@
  * @param {"top-left"|"top-right"|"bottom-left"|"bottom-right"} [opts.logoPos="top-left"]
  */
 // --- REPLACE: exportDebriefingTaskPdf ---
+// --- REPLACE: exportDebriefingTaskPdf ---
 export async function exportDebriefingTaskPdf(taskHtml, baseTitle = 'debriefing', opts = {}) {
     const options = { logo: true, logoPos: 'top-left', ...opts };
 
@@ -119,24 +120,24 @@ function readCssVars(names){
 // --- REPLACE: getPdfCss ---
 // --- DROP‑IN REPLACEMENT ---
 // --- REPLACE THIS FUNCTION IN pdf_export.js ---
+// 1) CSS-Generator
+// 1) CSS-Generator – kleines, fixes Logo oben links (Screen) + verstecktes Print-Logo
+// --- REPLACE: getPdfCss ---
 function getPdfCss(vars, { logoPos = 'top-left', hasLogo = true } = {}) {
-  // Position ermitteln
-  const isTop    = hasLogo && /top/.test(logoPos);
-  const isLeft   = hasLogo && /left/.test(logoPos);
-  const isRight  = hasLogo && /right/.test(logoPos);
-  const isBottom = hasLogo && /bottom/.test(logoPos);
+    // Logo-Position berechnen
+    const isTop    = hasLogo && /top/.test(logoPos);
+    const posTop    = isTop               ? '10mm' : 'auto';
+    const posBottom = hasLogo && /bottom/.test(logoPos) ? '10mm' : 'auto';
+    const posLeft   = hasLogo && /left/.test(logoPos)   ? '12mm' : 'auto';
+    const posRight  = hasLogo && /right/.test(logoPos)  ? '12mm' : 'auto';
 
-  const posTop    = isTop    ? '10mm' : 'auto';
-  const posBottom = isBottom ? '10mm' : 'auto';
-  const posLeft   = isLeft   ? '12mm' : 'auto';
-  const posRight  = isRight  ? '12mm' : 'auto';
+    // ► HIER Abstand definieren:
+    const logoSize      = '24mm';  // sichtbare Logobreite
+    const extraGap      = '12mm';  // zusätzlicher Abstand unter dem Logo
+    const defaultTopPad = '14mm';  // Padding ohne Logo oben
+    const headerPadTop  = isTop ? `calc(${posTop} + ${logoSize} + ${extraGap})` : defaultTopPad;
 
-  const logoSize      = '24mm';
-  const extraGap      = '12mm';
-  const defaultTopPad = '14mm';
-  const headerPadTop  = isTop ? `calc(${posTop} + ${logoSize} + ${extraGap})` : defaultTopPad;
-
-  return `
+    return `
 :root{
   --bg:${vars['--bg-color'] || '#1C2739'};
   --bg-dark:${vars['--bg-color-dark'] || '#18202E'};
@@ -149,15 +150,9 @@ function getPdfCss(vars, { logoPos = 'top-left', hasLogo = true } = {}) {
   --border:${vars['--card-border-color'] || '#2F4871'};
 }
 *{box-sizing:border-box}
-html,body{
-  margin:0; padding:0;
-  background:var(--bg);
-  color:var(--text);
-  font-family: Mulish, Arial, Helvetica, sans-serif;
-  line-height:1.35; font-size:12pt;
-}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family: Mulish, Arial, Helvetica, sans-serif;line-height:1.35;font-size:12pt}
 
-/* Header & Content */
+/* ▼ Neu: Padding oben richtet sich nach Logo-Höhe + Abstand */
 .pdf-header{display:flex;align-items:center;justify-content:space-between;padding:${headerPadTop} 14mm 0 14mm}
 .pdf-title{margin:0;color:var(--prime);font-size:18pt}
 .pdf-content{padding:8mm 14mm 14mm 14mm}
@@ -168,33 +163,14 @@ thead th{background:var(--bg-dark);color:var(--text)}
 th,td{border:1px solid var(--border);padding:3mm;text-align:left;vertical-align:top}
 tr:nth-child(even) td{background:rgba(255,255,255,0.02)}
 
-/* ── BBM‑Logo: Screen = sticky (fixed), Print = statisch (absolute) ── */
+/* Logo */
 .pdf-logo{
-  width:${logoSize}; height:auto;
-  opacity:.95;
-  z-index:9999;
-  pointer-events:none;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
+  position:absolute;
+  top:${posTop}; bottom:${posBottom}; left:${posLeft}; right:${posRight};
+  width:${logoSize}; height:auto; opacity:.95;
 }
 
-/* Auf Bildschirm: wirklich sticky */
-@media screen{
-  .pdf-logo{
-    position: fixed !important;
-    top:${posTop}; bottom:${posBottom};
-    left:${posLeft}; right:${posRight};
-  }
-}
-
-/* Beim Drucken/Print‑Preview: statisch auf Seite 1 */
-@media print{
-  .pdf-logo{
-    position: absolute !important;
-    top:${posTop}; bottom:${posBottom};
-    left:${posLeft}; right:${posRight};
-  }
-}
+@media print{ th,td{border-color:#666} }
 `;
 }
 
@@ -211,28 +187,104 @@ function escapeHtml(s=''){
 
 /* --- vorhandener Board-Export (Tabellen nach Status) --- */
 
-function buildPdfTemplate(board) {
-    const today = new Date().toLocaleDateString('de-CH');
+// 2) HTML-Builder – rendert Screen- & Print-Logo vorne im Dokument
+// Ersetzt buildTaskPdfHtml komplett
+// Baut das HTML für den PDF-Tab (Logo oben links, Titel darunter)
+function buildTaskPdfHtml(contentHtml, titleText) {
+  // Absoluter Pfad zum Logo, damit es im about:blank-Tab sicher geladen wird
+  const logoUrl = new URL('../../assets/icons/bbm.png', window.location.href).href;
 
-    return `
-      <style>
-        body{font-family:Arial,Helvetica,sans-serif;font-size:10pt}
-        h1{margin:0 0 6mm 0;font-size:18pt}
-        h2{margin:4mm 0 2mm 0;font-size:14pt}
-        table{width:100%;border-collapse:collapse;margin-bottom:4mm}
-        th,td{border:0.2mm solid #888;padding:2mm;text-align:left}
-        th{background:#eee}
-      </style>
+  return `
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>${titleText ? String(titleText).replace(/</g,'&lt;') : 'PDF'}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-      <header style="text-align:center;margin-bottom:6mm">
-          <h1>${escapeHtml(board.title)}</h1>
-          <p>${today}</p>
-      </header>
+<style>
+  /* Basis */
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+    color: #1C2739; /* entspricht --bg-color / dunkles Blau */
+    font-family: Arial, Helvetica, sans-serif;
+    line-height: 1.4;
+  }
 
-      ${['to-do','in-progress','review','done']
-        .map(st => renderStatusTable(st, board.tasks.filter(t => t.status === st)))
-        .join('')}
-    `;
+  /* Fixiertes BBM-Logo oben links (klein) */
+  #bbm-logo {
+    position: fixed;
+    top: 12mm;
+    left: 12mm;
+    height: 14mm;      /* ~ 50px auf A4 */
+    width: auto;
+    z-index: 9999;
+    pointer-events: none;
+  }
+
+  /* Seite / Inhalt */
+  .page {
+    /* A4-Breite mit Innenrand; im Browser-Tab zentriert */
+    width: 210mm;
+    margin: 0 auto;
+    padding: 30mm 15mm 20mm 15mm; /* oben genug Abstand: 30mm wegen Logo */
+    box-sizing: border-box;
+  }
+
+  /* Titel (Abstand unter Logo) */
+  .doc-title {
+    margin: 0 0 10mm 0;     /* zusätzlicher Abstand unter dem Titel */
+    padding-top: 8mm;        /* noch etwas mehr Luft unter dem fixen Logo */
+    font-size: 18pt;
+    font-weight: 700;
+    text-align: center;
+    color: #1C2739;
+  }
+
+  /* Optional: leichte Tabellen-/Inhalts-Defaults, falls dein contentHtml eigene Tabellen hat */
+  .page table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .page th, .page td {
+    border: 0.2mm solid #2F4871;  /* angelehnt an --card-border-color */
+    padding: 2mm;
+    vertical-align: top;
+  }
+
+  /* Druck: gleiche Regeln beibehalten */
+  @media print {
+    #bbm-logo {
+      position: fixed;
+      top: 12mm;
+      left: 12mm;
+      height: 14mm;
+    }
+    .page {
+      width: auto;           /* Druck-Engine nutzt Seitenformat */
+      margin: 0;
+      padding: 30mm 15mm 20mm 15mm;
+    }
+  }
+</style>
+</head>
+<body>
+  <!-- Fixiertes Logo (oben links) -->
+  <img id="bbm-logo" src="${logoUrl}" alt="BBM Logo">
+
+  <!-- Seite/Container -->
+  <main class="page">
+    <h1 class="doc-title">${titleText ? String(titleText).replace(/</g,'&lt;') : ''}</h1>
+
+    <!-- Dein Task-HTML unverändert -->
+    <div class="content">
+      ${contentHtml || ''}
+    </div>
+  </main>
+</body>
+</html>`;
 }
 
 function renderStatusTable(status, tasks) {

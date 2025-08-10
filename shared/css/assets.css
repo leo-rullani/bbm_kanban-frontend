@@ -660,3 +660,15 @@
     background-color: var(--bg-color-light);
     align-self: stretch;
 }
+
+#bbm-logo-screen,
+#bbm-logo-print {
+    position: fixed;
+    top: 10mm;   /* Abstand von oben */
+    left: 12mm;  /* Abstand von links */
+    height: 50px;
+    width: auto;
+    margin: 0;
+    z-index: 9999;
+    pointer-events: none;
+}

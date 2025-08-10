@@ -26,6 +26,14 @@ const LOGIN_URL = 'login/';
 const REGISTER_URL = 'registration/';
 
 /**
+ * URL des GFX Manuals (statische PDF außerhalb der Git-Repos).
+ * Auf Prod verweist /manuals/... per Nginx auf /srv/manuals/.
+ * Bei Bedarf lokal auf eine absolute URL ändern.
+ * @constant {string}
+ */
+const GFX_MANUAL_URL = '/manuals/bbm_gfx_manual.pdf';
+
+/**
  * API endpoint for boards (relative to API_BASE_URL).
  * @constant {string}
  */

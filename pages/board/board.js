@@ -96,6 +96,9 @@ async function init() {
     const hdrBtn = document.getElementById('pdf-download-btn');
     if (hdrBtn) hdrBtn.style.display = 'none';
 
+    // ▼ NEU: GFX-Manual-Button je nach Board anzeigen/verlinken
+    updateGfxManualButton();
+
     if (getParamFromUrl('task_id')) openTaskDetailDialog(getParamFromUrl('task_id'));
 }
 /**
@@ -318,6 +321,30 @@ function isGraphicsRapportBoard() {
 function setDefaultDescriptionForGraphics() {
     if (isGraphicsRapportBoard() && window.GRAPHICS_RAPPORT_FORM_HTML) {
         currentTask.description = window.GRAPHICS_RAPPORT_FORM_HTML;
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/*  GFX Manual Button – Sichtbarkeit & Link                            */
+/* ------------------------------------------------------------------ */
+/**
+ * Blendet den GFX‑Manual‑Button im Board‑Header ein/aus und setzt den Link.
+ * – sichtbar NUR in Grafik‑Boards (isGraphicsRapportBoard())
+ * – Link aus GFX_MANUAL_URL (config.js), Fallback: /manuals/bbm_gfx_manual.pdf
+ */
+function updateGfxManualButton() {
+    const btn = document.getElementById('gfx-manual-btn');
+    if (!btn) return;
+
+    const isGraphics = typeof isGraphicsRapportBoard === 'function' && isGraphicsRapportBoard();
+    if (isGraphics) {
+        const url = (typeof GFX_MANUAL_URL !== 'undefined' && GFX_MANUAL_URL)
+            ? GFX_MANUAL_URL
+            : '/manuals/bbm_gfx_manual.pdf';
+        btn.href = url;
+        btn.style.display = 'inline-flex';  // gleiche Optik wie andere Header-Buttons
+    } else {
+        btn.style.display = 'none';
     }
 }
 
@@ -952,6 +979,8 @@ async function updateBoard(data) {
     } else {
         currentBoard.title = response.data.title
         renderTitle()
+        // ▼ NEU: falls der Titel geändert wurde -> Grafik-Heuristik neu auswerten
+        updateGfxManualButton();
     }
     return response
 }

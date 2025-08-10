@@ -78,6 +78,17 @@
                 </button>
                 <!-- ▲ PDF-Button im Header deaktiviert -->
 
+                <!-- ▼▼▼ NEU: GFX Manual (PDF) – wird in board.js sichtbar geschaltet -->
+                <a id="gfx-manual-btn"
+                   class="std_btn btn_secondary d_flex_sc_gs"
+                   href="#"
+                   target="_blank" rel="noopener"
+                   style="display:none"
+                   title="Open GFX Manual (PDF)">
+                    <p>GFX Manual (PDF)</p>
+                </a>
+                <!-- ▲▲▲ NEU -->
+
                 <button onclick="openEditBoardDialog()" class="std_btn d_flex_sc_gs board_settings_btn">
                     <img src="../../assets/icons/settings.svg" alt="">
                 </button>
@@ -123,8 +134,6 @@
             </div>
 
         </section>
-
-
 
         <section onmousedown="toggleOpenId('dialog_wrapper'); deleteLastingToast(); resetCurrentDialogs()" id="dialog_wrapper" class="dialog_wrapper pad_l" open="false">
             <section id="edit_board_dialog" current_dialog="false" dialog-type="board_settings" class="current_dialog dialog card d_flex_ss_gl f_d_c std_form w_full" onmousedown="stopProp(event)" onclick="stopProp(event)">

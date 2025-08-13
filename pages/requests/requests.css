@@ -1,111 +1,66 @@
+/* Suchfeld / Header */
 .searchbar > .form_group_w_icon_wo_label {
     margin: 0;
     width: 400px;
     padding: var(--btn-pad);
 }
-
-.searchbar {
-    flex-grow: 1;
-}
-
-header {
-    flex-wrap: wrap;
-}
-
-.add_btn {
-    gap: 8px;
-}
-
-.add_btn > img {
-    padding: 2px;
-    height: 22px;
-    width: 22px;
-}
+.searchbar { flex-grow: 1; }
+header { flex-wrap: wrap; }
 
 @media screen and (max-width: 780px) {
-    .searchbar {
-        order: 2;
-        width: 100%;
-    }
+    .searchbar { order: 2; width: 100%; }
 }
-
 @media screen and (max-width: 1024px) {
-    .add_btn > p {
-        display: none;
-    }
-    .add_btn {
-        padding: 4px;
-    }
-    .searchbar > .form_group_w_icon_wo_label {
-        width: 100%;
-    }
+    .searchbar > .form_group_w_icon_wo_label { width: 100%; }
 }
 
-.arrow_list {
-    padding-left: 0;
-}
-
-/* -------- NEU für Tabelle -------- */
-
-.table-responsive {
-    overflow-x: auto;
-    width: 100%;
-    margin-top: 1rem;
-}
-
+/* Tabelle */
+.table-responsive { overflow-x: auto; width: 100%; margin-top: 1rem; }
 .request_table {
-    border-collapse: collapse;
-    width: 100%;
-    min-width: 900px;
-    color: var(--font-prime-color);
-    font-size: 0.9rem;
+    border-collapse: collapse; width: 100%; min-width: 900px;
+    color: var(--font-prime-color); font-size: 0.9rem;
 }
-
-.request_table thead {
-    background-color: var(--bg-header);
-    color: var(--font-prime-color);
-    font-weight: 700;
-}
-
+.request_table thead { background-color: var(--bg-header); color: var(--font-prime-color); font-weight: 700; }
 .request_table thead th {
-    padding: 12px 16px;
-    text-align: left;
-    border-bottom: 2px solid var(--border-color);
-    white-space: nowrap;
+    padding: 12px 16px; text-align: left; border-bottom: 2px solid var(--border-color); white-space: nowrap;
 }
+.request_table tbody tr { border-bottom: 1px solid var(--border-color); transition: background-color 0.3s ease; }
+.request_table tbody tr:hover { background-color: var(--bg-hover); }
+.request_table tbody td { padding: 10px 16px; white-space: nowrap; vertical-align: middle; }
+.request_table tbody td:first-child { font-weight: 600; }
 
-.request_table tbody tr {
-    border-bottom: 1px solid var(--border-color);
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
+.text_center { text-align: center; }
 
-.request_table tbody tr:hover {
-    background-color: var(--bg-hover);
-}
-
-.request_table tbody td {
-    padding: 10px 16px;
-    white-space: nowrap;
-    vertical-align: middle;
-}
-
-.request_table tbody td:first-child {
-    font-weight: 600;
-}
-
-.text_center {
-    text-align: center;
-}
-
-/* Responsive Anpassung für kleine Bildschirme */
 @media screen and (max-width: 780px) {
-    .request_table {
-        min-width: 600px;
-        font-size: 0.85rem;
-    }
-    .request_table thead th,
-    .request_table tbody td {
-        padding: 8px 10px;
-    }
+    .request_table { min-width: 600px; font-size: 0.85rem; }
+    .request_table thead th, .request_table tbody td { padding: 8px 10px; }
 }
+
+/* Status-Anzeige & Buttons */
+.status-cell { display: flex; align-items: center; gap: 10px; }
+.status-dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.25);
+    display: inline-block;
+}
+.status-open     { background: #ffe066; } /* BBM-Gelb */
+.status-accepted { background: #2ecc71; } /* Grün */
+.status-declined { background: #e74c3c; } /* Rot */
+
+.status-actions { display: flex; gap: 6px; }
+.status-btn {
+    font-size: 0.78rem;
+    padding: 4px 8px;
+    border-radius: 14px;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--font-prime-color);
+    cursor: pointer;
+}
+.status-btn:hover { filter: brightness(1.1); }
+.btn-open     { border-color: #ffe066; }
+.btn-accepted { border-color: #2ecc71; }
+.btn-declined { border-color: #e74c3c; }
+.status-btn.active.btn-open     { background: #ffe06622; }
+.status-btn.active.btn-accepted { background: #2ecc7122; }
+.status-btn.active.btn-declined { background: #e74c3c22; }

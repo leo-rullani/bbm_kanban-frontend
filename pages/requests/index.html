@@ -20,7 +20,7 @@
     <script src="../../shared/js/ui_helper.js"></script>
     <script src="../../shared/js/api.js"></script>
     <script src="../../shared/js/header.js"></script>
-    <script src="./requests.js"></script>
+    <script src="./requests.js" defer></script>
 </head>
 
 <body onload="setHeader(); getAndRenderRequestList();">
@@ -28,33 +28,29 @@
         <img onclick="redirectToDashboard()" src="../../assets/icons/bbm.png" alt="BBM Logo" height="48" />
         <div id="head_content_right" class="d_flex_cc_gm head_content_right"></div>
     </header>
+
     <main class="w_full d_flex_sc_gl">
         <section class="w_full d_flex_cs_gl f_d_c">
             <nav class="font_sec_color">
                 <a class="link_secondary" href="../dashboard/">Dashboard</a> /
                 <a class="link_secondary" href="./index.html">Requests</a>
             </nav>
+
             <header class="d_flex_sc_gl w_full d_sb">
-                <h1 class="font_white_color">Your Requests</h1>
+                <h1 class="font_white_color">Your Requests (Demo)</h1>
                 <form class="searchbar" role="search" aria-label="Search requests">
                     <div class="form_group_w_icon_wo_label w_full">
                         <img src="../../assets/icons/search_yellow.svg" alt="Search icon" />
                         <input
                             id="request_search"
                             type="text"
-                            placeholder="Search"
+                            placeholder="Search by function, project or date"
                             onkeyup="renderRequestList()"
-                            required
                             aria-describedby="search_desc"
                         />
                         <label for="request_search" id="search_desc" class="d_none">Search requests</label>
                     </div>
                 </form>
-                <!-- Optional: Create new request button -->
-                <!-- <button onclick="openRequestCreateDialog()" class="std_btn btn_prime d_flex_sc_gs add_btn">
-                    <img src="../../assets/icons/add_black.svg" alt="Add icon" />
-                    <p>Create request</p>
-                </button> -->
             </header>
 
             <div class="table-responsive">
@@ -84,9 +80,9 @@
                     </tbody>
                 </table>
             </div>
-
         </section>
     </main>
+
     <footer class="main_footer w_full">
         <nav class="d_flex_cs_gl">
             <a href="../privacy/index.html" class="link">Privacy Policy</a>

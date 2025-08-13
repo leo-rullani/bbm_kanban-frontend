@@ -1,82 +1,194 @@
 /**
- * The base URL for request-related API calls.
- * @type {string}
+ * DEMO: statische Requests ohne Backend.
+ * Start immer 15:00, End 20:00, Location fix "ROC Sissach".
  */
-const REQUESTS_URL = API_BASE_URL + "requests/";
 
-/**
- * Array storing the list of requests.
- * @type {Array}
- */
+const DEFAULT_START = "15:00";
+const DEFAULT_END   = "20:00";
+const DEFAULT_LOCATION = "ROC Sissach";
+const STORE_KEY = "bbm-requests-demo-status";
+
+/** Vier Beispiel-Einsätze */
+const sampleRequests = [
+  {
+    id: "r1",
+    dateISO: "2025-09-05",                    // Friday
+    function: "Graphics Operator",
+    project: "SFL Matchday 6",
+    start: DEFAULT_START,
+    end: DEFAULT_END,
+    location: DEFAULT_LOCATION,
+    status: "accepted",                       // vorgewählt (grün)
+    meeting_point: "-",
+    vehicle_out: "-",
+    vehicle_return: "-",
+    hotel: "-",
+    shuttle: "-",
+    deployment_location: "ROC Sissach",
+    order_number: "ORD-2401"
+  },
+  {
+    id: "r2",
+    dateISO: "2025-09-12",                    // Friday
+    function: "Camera 2",
+    project: "SFL Matchday 7",
+    start: DEFAULT_START,
+    end: DEFAULT_END,
+    location: DEFAULT_LOCATION,
+    status: "open",                           // (gelb)
+    meeting_point: "-",
+    vehicle_out: "-",
+    vehicle_return: "-",
+    hotel: "-",
+    shuttle: "-",
+    deployment_location: "ROC Sissach",
+    order_number: "ORD-2402"
+  },
+  {
+    id: "r3",
+    dateISO: "2025-09-20",                    // Saturday
+    function: "Replay",
+    project: "SFL Matchday 8",
+    start: DEFAULT_START,
+    end: DEFAULT_END,
+    location: DEFAULT_LOCATION,
+    status: "accepted",                       // vorgewählt (grün)
+    meeting_point: "-",
+    vehicle_out: "-",
+    vehicle_return: "-",
+    hotel: "-",
+    shuttle: "-",
+    deployment_location: "ROC Sissach",
+    order_number: "ORD-2403"
+  },
+  {
+    id: "r4",
+    dateISO: "2025-09-28",                    // Sunday
+    function: "Driver",
+    project: "SFL Matchday 9",
+    start: DEFAULT_START,
+    end: DEFAULT_END,
+    location: DEFAULT_LOCATION,
+    status: "open",                           // (gelb)
+    meeting_point: "-",
+    vehicle_out: "-",
+    vehicle_return: "-",
+    hotel: "-",
+    shuttle: "-",
+    deployment_location: "ROC Sissach",
+    order_number: "ORD-2404"
+  }
+];
+
+/** Laufende Liste im UI */
 let requestList = [];
 
-/**
- * Asynchronously fetches the list of requests and renders them if available.
- * Updates the global requestList variable.
- * @returns {Promise<void>}
- */
+/** Format: 'Friday, 5.9.2025' */
+function formatDateNice(iso) {
+  const d = new Date(iso + "T00:00:00");
+  const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  return `${days[d.getDay()]}, ${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()}`;
+}
+
+/** Persistierte Status (optional) laden/mergen */
+function hydrateFromStorage(list) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
+    return list.map(item => saved[item.id] ? { ...item, status: saved[item.id] } : item);
+  } catch {
+    return list;
+  }
+}
+function persistStatus(id, status) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
+    saved[id] = status;
+    localStorage.setItem(STORE_KEY, JSON.stringify(saved));
+  } catch {}
+}
+
+/** Init & Render */
 async function getAndRenderRequestList() {
-    requestList = await getRequests();
-    if(requestList) {
-        renderRequestList();
-    }
+  // Kein Backend: wir nehmen die Samples
+  requestList = hydrateFromStorage(sampleRequests);
+  renderRequestList();
 }
 
-/**
- * Asynchronously fetches the list of requests from the backend API.
- * @returns {Promise<Array>} Returns an array of requests if successful, otherwise an empty array.
- */
-async function getRequests() {
-    let reqResp = await getData(REQUESTS_URL);
-    if (reqResp && reqResp.ok) {
-        return reqResp.data;
-    } else {
-        return [];
-    }
-}
-
-/**
- * Renders the list of requests filtered by the current search input.
- * Updates the UI by filling the request table body or displaying a placeholder row.
- */
+/** Suche + Render */
 function renderRequestList() {
-    let htmltext = "";
-    let searchInput = document.getElementById("request_search");
-    let searchValue = searchInput ? searchInput.value.trim().toLowerCase() : "";
-    let filteredRequests = requestList.filter(req => req.title && req.title.toLowerCase().includes(searchValue));
+  const tbody = document.getElementById("request_list");
+  const q = (document.getElementById("request_search")?.value || "").trim().toLowerCase();
 
-    if(filteredRequests.length <= 0){
-        htmltext = `<tr><td colspan="14" class="font_prime_color text_center">...No requests available...</td></tr>`;
-    } else {
-        filteredRequests.forEach(req => {
-            htmltext += getRequestListEntryTemplate(req);
-        });
-    }
+  const filtered = requestList.filter(r => {
+    const hay = [
+      formatDateNice(r.dateISO),
+      r.function || "", r.project || "", r.location || "", r.status || ""
+    ].join(" ").toLowerCase();
+    return q === "" || hay.includes(q);
+  });
 
-    document.getElementById("request_list").innerHTML = htmltext;
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="14" class="font_prime_color text_center">...No requests available...</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(getRequestListEntryTemplate).join("");
 }
 
-/**
- * Returns the HTML template for a single request entry as a table row.
- * Includes all relevant columns matching the table header.
- * @param {Object} request - The request object containing request details.
- * @returns {string} The HTML string representing the request row.
- */
-function getRequestListEntryTemplate(request) {
-    return `<tr>
-                <td>${request.date || "-"}</td>
-                <td>${request.function || "-"}</td>
-                <td>${request.project || "-"}</td>
-                <td>${request.meeting_point || "-"}</td>
-                <td>${request.vehicle_out || "-"}</td>
-                <td>${request.start || "-"}</td>
-                <td>${request.end || "-"}</td>
-                <td>${request.vehicle_return || "-"}</td>
-                <td>${request.location || "-"}</td>
-                <td>${request.hotel || "-"}</td>
-                <td>${request.shuttle || "-"}</td>
-                <td>${request.status || "-"}</td>
-                <td>${request.deployment_location || "-"}</td>
-                <td>${request.order_number || "-"}</td>
-            </tr>`;
+/** Einzelzeile */
+function getRequestListEntryTemplate(r) {
+  const date = formatDateNice(r.dateISO);
+  const statusDotClass = r.status === "accepted" ? "status-accepted"
+                        : r.status === "declined" ? "status-declined"
+                        : "status-open";
+
+  return `
+  <tr>
+    <td>${date}</td>
+    <td>${r.function || "-"}</td>
+    <td>${r.project || "-"}</td>
+    <td>${r.meeting_point || "-"}</td>
+    <td>${r.vehicle_out || "-"}</td>
+    <td>${r.start || "${DEFAULT_START}"}</td>
+    <td>${r.end || "${DEFAULT_END}"}</td>
+    <td>${r.vehicle_return || "-"}</td>
+    <td>${r.location || "${DEFAULT_LOCATION}"}</td>
+    <td>${r.hotel || "-"}</td>
+    <td>${r.shuttle || "-"}</td>
+
+    <td>
+      <div class="status-cell">
+        <span class="status-dot ${statusDotClass}" aria-hidden="true"></span>
+        <div class="status-actions" role="group" aria-label="Set status">
+          ${renderStatusBtn(r.id, "open", r.status)}
+          ${renderStatusBtn(r.id, "accepted", r.status)}
+          ${renderStatusBtn(r.id, "declined", r.status)}
+        </div>
+      </div>
+    </td>
+
+    <td>${r.deployment_location || "-"}</td>
+    <td>${r.order_number || "-"}</td>
+  </tr>`;
 }
+
+function renderStatusBtn(id, kind, current) {
+  const label = kind.charAt(0).toUpperCase() + kind.slice(1); // Open/Accepted/Declined
+  const active = current === kind ? "active" : "";
+  const cls = kind === "accepted" ? "btn-accepted"
+           : kind === "declined" ? "btn-declined"
+           : "btn-open";
+  return `<button class="status-btn ${cls} ${active}" onclick="setStatus('${id}','${kind}')">${label}</button>`;
+}
+
+/** Status umschalten */
+function setStatus(id, newStatus) {
+  requestList = requestList.map(r => r.id === id ? { ...r, status: newStatus } : r);
+  persistStatus(id, newStatus);
+  renderRequestList();
+}
+
+// Exporte (optional global, wegen inline onclick):
+window.getAndRenderRequestList = getAndRenderRequestList;
+window.renderRequestList = renderRequestList;
+window.setStatus = setStatus;

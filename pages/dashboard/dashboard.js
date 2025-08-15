@@ -298,15 +298,31 @@ function redirectToBoards(){
     window.location.href = "../../pages/boards/"
 }
 
-/* ───────── Our‑Portfolio Marquee ───────── */
-function initPortfolioMarquee(){
+/* ───────── Our-Portfolio Marquee ───────── */
+/**
+ * Initializes the portfolio marquee animation for the `.portfolio-track` element.
+ *
+ * Process:
+ * 1. Reads the original list items from `.portfolio-track`.
+ * 2. Clears the track and rebuilds it with alternating styles.
+ * 3. Inserts a "OUR PORTFOLIO" banner after every 7 items.
+ * 4. Duplicates the sequence to create an infinite loop effect.
+ * 5. Calculates and sets CSS custom properties for the animation distance and duration.
+ *
+ * Expected CSS variables set:
+ * - `--marquee-distance`: total horizontal scroll distance.
+ * - `--marquee-duration`: duration of the marquee animation in seconds.
+ *
+ * @returns {void}
+ */
+function initPortfolioMarquee() {
     const track = document.querySelector('.portfolio-track');
-    if(!track) return;
+    if (!track) return;
 
-    /* 1. Original‑Items sammeln */
+    // 1. Collect original items
     const originalItems = Array.from(track.children).map(li => li.textContent.trim());
 
-    /* 2. Track leeren & neu aufbauen  */
+    // 2. Clear the track & rebuild
     track.innerHTML = '';
     let counter = 0;
 
@@ -317,30 +333,30 @@ function initPortfolioMarquee(){
                        2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zM10 4h4v2h-4V4zm10 
                        14H4V8h16v10z"/>
             </svg>
-            OUR PORTFOLIO
+            OUR PORTFOLIO
         </span>`;
 
     originalItems.forEach((txt, idx) => {
-        /* Event‑Item anlegen */
+        // Create the event item
         const li = document.createElement('li');
         li.textContent = txt;
-        if(idx % 2 === 1) li.classList.add('portfolio-item-alt');   // abwechselnd gelb
+        if (idx % 2 === 1) li.classList.add('portfolio-item-alt');   // alternate styling
         track.appendChild(li);
         counter++;
 
-        /* Nach jedem 7. Inhalt → Banner einfügen */
-        if(counter % 7 === 0){
+        // After every 7 items → insert the banner
+        if (counter % 7 === 0) {
             const bannerLi = document.createElement('li');
             bannerLi.innerHTML = bannerHTML;
             track.appendChild(bannerLi);
         }
     });
 
-    /* 3. Duplizieren → endloser Loop */
+    // 3. Duplicate the sequence → endless loop effect
     track.innerHTML += track.innerHTML;
 
-    /* 4. Marquee‑Variablen setzen */
-    const SPEED = 60;                       // px / sec
+    // 4. Set marquee variables
+    const SPEED = 60;                       // px / second
     const trackWidth = track.scrollWidth / 2;
     const duration = trackWidth / SPEED;
 
@@ -348,5 +364,5 @@ function initPortfolioMarquee(){
     track.style.setProperty('--marquee-duration', `${duration}s`);
 }
 
-/* nach DOM‑Load */
+/* Initialize after DOM load */
 window.addEventListener('load', initPortfolioMarquee);

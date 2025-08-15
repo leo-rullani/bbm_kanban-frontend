@@ -1,21 +1,45 @@
-/* ---------- Task-PDF in neuem Tab/Print ---------- */
+/**
+ * @file pdf_export.js
+ * @summary Task → PDF utilities for Debriefing boards.
+ * @description
+ * Provides functions to open a print-ready popup with task HTML (user chooses "Save as PDF"),
+ * plus an optional board‑wide export via html2pdf. Includes helpers to read CSS variables
+ * from the host app and generate a self-contained CSS block for the PDF document.
+ *
+ * Exports:
+ *  - {@link exportDebriefingTaskPdf}: open a new tab with app-like styling and trigger print
+ *  - {@link downloadDebriefingPdf}: download an aggregated PDF for the whole board (html2pdf)
+ */
+
+/* ---------- Task PDF in new tab / print ---------- */
 
 /**
- * Öffnet ein neues Tab mit dem Task-HTML + App-naher Optik.
- * Nutzer:innen wählen dann "Als PDF speichern".
+ * Options for {@link exportDebriefingTaskPdf}.
+ * @typedef {Object} ExportOptions
+ * @property {boolean} [logo=true] - Whether to render the BBM logo in the PDF view.
+ * @property {"top-left"|"top-right"|"bottom-left"|"bottom-right"} [logoPos="top-left"]
+ *   Position of the logo within the page.
+ */
+
+/**
+ * Opens a new tab containing the task HTML with app-like styling; the user can then
+ * choose "Save as PDF" in the browser print dialog.
  *
- * @param {string} taskHtml   – gespeichertes HTML der Taskbeschreibung
- * @param {string} baseTitle  – Dateiname/Überschrift (ohne Endung)
- * @param {Object} [opts]
- * @param {boolean} [opts.logo=true]         – BBM-Logo einblenden
- * @param {"top-left"|"top-right"|"bottom-left"|"bottom-right"} [opts.logoPos="top-left"]
+ * - Copies selected CSS variables from the host app (via {@link readCssVars})
+ * - Generates a self-contained CSS sheet (via {@link getPdfCss})
+ * - Injects task HTML and (optionally) a BBM logo, and triggers `window.print()`
+ *
+ * @param {string} taskHtml - The stored HTML of the task description to render.
+ * @param {string} [baseTitle='debriefing'] - Base filename / heading (no extension).
+ * @param {ExportOptions} [opts] - Additional rendering options.
+ * @returns {Promise<void>} Resolves after the print tab is written and print is triggered.
  */
 // --- REPLACE: exportDebriefingTaskPdf ---
 // --- REPLACE: exportDebriefingTaskPdf ---
 export async function exportDebriefingTaskPdf(taskHtml, baseTitle = 'debriefing', opts = {}) {
     const options = { logo: true, logoPos: 'top-left', ...opts };
 
-    // CSS-Variablen aus der App übernehmen
+    // Pull selected CSS variables from the app (fallbacks will be applied)
     const vars = readCssVars([
         '--bg-color','--bg-color-dark','--bg-color-light',
         '--font_white_color','--font-prime-color',
@@ -23,14 +47,14 @@ export async function exportDebriefingTaskPdf(taskHtml, baseTitle = 'debriefing'
         '--card-bg-color','--card-border-color'
     ]);
 
-    // ▼ Neu: wir geben getPdfCss mit, ob ein Logo oben sitzt → für korrektes Padding
+    // Pass whether a logo is shown and where → padding will adapt accordingly
     const css = getPdfCss(vars, { logoPos: options.logoPos, hasLogo: !!options.logo });
 
     const titleText = baseTitle || 'debriefing';
     const fileBase  = sanitizeFilename(titleText) + '_' + new Date().toISOString().slice(0,10);
 
     const w = window.open('', '_blank');
-    if (!w) { alert('Popup blocked – bitte Popups erlauben.'); return; }
+    if (!w) { alert('Popup blocked – please allow popups.'); return; }
 
     w.document.open();
     w.document.write(`<!doctype html>
@@ -61,7 +85,14 @@ export async function exportDebriefingTaskPdf(taskHtml, baseTitle = 'debriefing'
     w.document.close();
 }
 
-/* ---------- Optional: Board-weiter PDF-Export (bestehend) ---------- */
+/* ---------- Optional: board-wide PDF export (existing) ---------- */
+
+/**
+ * Aggregates the current board into a single PDF using html2pdf (client-side).
+ * Requires `window.currentBoard` and loads `html2pdf` on demand if absent.
+ *
+ * @returns {Promise<void>} Resolves after the PDF has been generated and downloaded.
+ */
 export async function downloadDebriefingPdf() {
     if (!window.currentBoard) { alert('Board data missing'); return; }
     if (!window.html2pdf)      await loadHtml2Pdf();
@@ -94,6 +125,13 @@ export async function downloadDebriefingPdf() {
 
 /* ======================= Helpers ======================= */
 
+/**
+ * Reads the given CSS custom properties from `:root` and returns a name→value map.
+ * Missing variables are filled with sensible defaults for the PDF theme.
+ *
+ * @param {string[]} names - CSS variable names to read (e.g., ["--bg-color"]).
+ * @returns {Record<string,string>} Map of variable names to computed values (trimmed).
+ */
 function readCssVars(names){
     const cs = getComputedStyle(document.documentElement);
     const out = {};
@@ -114,27 +152,31 @@ function readCssVars(names){
 }
 
 /**
- * HIER STYLST DU DAS PDF!
- * Passe diese Funktion an (Farben, Abstände, Tabellen, Logo-Größe usw.).
+ * Generates the CSS string used inside the print popup for styling.
+ * Adjusts top padding based on logo presence and position.
+ *
+ * @param {Record<string,string>} vars - Name→value map of theme variables (from {@link readCssVars}).
+ * @param {{logoPos?: "top-left"|"top-right"|"bottom-left"|"bottom-right", hasLogo?: boolean}} [options]
+ *   Position of the logo and whether it should be rendered.
+ * @returns {string} A full CSS stylesheet to embed in the generated HTML.
  */
 // --- REPLACE: getPdfCss ---
 // --- DROP‑IN REPLACEMENT ---
 // --- REPLACE THIS FUNCTION IN pdf_export.js ---
-// 1) CSS-Generator
-// 1) CSS-Generator – kleines, fixes Logo oben links (Screen) + verstecktes Print-Logo
+// 1) CSS generator (logo small in a corner, print-safe)
 // --- REPLACE: getPdfCss ---
 function getPdfCss(vars, { logoPos = 'top-left', hasLogo = true } = {}) {
-    // Logo-Position berechnen
-    const isTop    = hasLogo && /top/.test(logoPos);
-    const posTop    = isTop               ? '10mm' : 'auto';
-    const posBottom = hasLogo && /bottom/.test(logoPos) ? '10mm' : 'auto';
-    const posLeft   = hasLogo && /left/.test(logoPos)   ? '12mm' : 'auto';
-    const posRight  = hasLogo && /right/.test(logoPos)  ? '12mm' : 'auto';
+    // Compute logo position
+    const isTop     = hasLogo && /top/.test(logoPos);
+    const posTop    = isTop                                 ? '10mm' : 'auto';
+    const posBottom = hasLogo && /bottom/.test(logoPos)     ? '10mm' : 'auto';
+    const posLeft   = hasLogo && /left/.test(logoPos)       ? '12mm' : 'auto';
+    const posRight  = hasLogo && /right/.test(logoPos)      ? '12mm' : 'auto';
 
-    // ► HIER Abstand definieren:
-    const logoSize      = '24mm';  // sichtbare Logobreite
-    const extraGap      = '12mm';  // zusätzlicher Abstand unter dem Logo
-    const defaultTopPad = '14mm';  // Padding ohne Logo oben
+    // Spacing around the logo & header
+    const logoSize      = '24mm';  // visible logo width
+    const extraGap      = '12mm';  // extra space below the logo
+    const defaultTopPad = '14mm';  // header padding without logo
     const headerPadTop  = isTop ? `calc(${posTop} + ${logoSize} + ${extraGap})` : defaultTopPad;
 
     return `
@@ -152,12 +194,12 @@ function getPdfCss(vars, { logoPos = 'top-left', hasLogo = true } = {}) {
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family: Mulish, Arial, Helvetica, sans-serif;line-height:1.35;font-size:12pt}
 
-/* ▼ Neu: Padding oben richtet sich nach Logo-Höhe + Abstand */
+/* Header padding adapts to logo height + gap */
 .pdf-header{display:flex;align-items:center;justify-content:space-between;padding:${headerPadTop} 14mm 0 14mm}
 .pdf-title{margin:0;color:var(--prime);font-size:18pt}
 .pdf-content{padding:8mm 14mm 14mm 14mm}
 
-/* Tabellen */
+/* Tables */
 table{width:100%;border-collapse:collapse;margin:6mm 0}
 thead th{background:var(--bg-dark);color:var(--text)}
 th,td{border:1px solid var(--border);padding:3mm;text-align:left;vertical-align:top}
@@ -174,24 +216,42 @@ tr:nth-child(even) td{background:rgba(255,255,255,0.02)}
 `;
 }
 
-/* kleine Utils */
+/**
+ * Sanitizes a string for use as a file name: strips reserved characters,
+ * collapses whitespace to underscores, and limits length.
+ *
+ * @param {string} name - Raw file name without extension.
+ * @returns {string} A sanitized, filesystem-safe file name (no extension).
+ */
 function sanitizeFilename(name){
     return (name || '')
         .replace(/[\\/:*?"<>|]+/g,'-')
         .replace(/\s+/g,'_')
         .slice(0,120);
 }
+
+/**
+ * Escapes HTML special characters in a string.
+ *
+ * @param {string} [s=''] - Raw string to escape.
+ * @returns {string} Escaped HTML-safe string.
+ */
 function escapeHtml(s=''){
     return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
 
-/* --- vorhandener Board-Export (Tabellen nach Status) --- */
+/* --- Existing board export (status-grouped tables) --- */
 
-// 2) HTML-Builder – rendert Screen- & Print-Logo vorne im Dokument
-// Ersetzt buildTaskPdfHtml komplett
-// Baut das HTML für den PDF-Tab (Logo oben links, Titel darunter)
+/**
+ * Builds a full HTML document string for a print tab (logo in the corner, title under it)
+ * and injects the provided content HTML unchanged.
+ *
+ * @param {string} contentHtml - Raw HTML for the task/body content.
+ * @param {string} titleText - Title to display at the top and in `<title>`.
+ * @returns {string} Complete HTML document as a string.
+ */
 function buildTaskPdfHtml(contentHtml, titleText) {
-  // Absoluter Pfad zum Logo, damit es im about:blank-Tab sicher geladen wird
+  // Absolute logo URL so it loads reliably in about:blank
   const logoUrl = new URL('../../assets/icons/bbm.png', window.location.href).href;
 
   return `
@@ -203,58 +263,58 @@ function buildTaskPdfHtml(contentHtml, titleText) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-  /* Basis */
+  /* Base */
   html, body {
     margin: 0;
     padding: 0;
     background: #ffffff;
-    color: #1C2739; /* entspricht --bg-color / dunkles Blau */
+    color: #1C2739; /* matches --bg-color (dark blue) */
     font-family: Arial, Helvetica, sans-serif;
     line-height: 1.4;
   }
 
-  /* Fixiertes BBM-Logo oben links (klein) */
+  /* Fixed BBM logo (top-left) */
   #bbm-logo {
     position: fixed;
     top: 12mm;
     left: 12mm;
-    height: 14mm;      /* ~ 50px auf A4 */
+    height: 14mm;      /* ~ 50px on A4 */
     width: auto;
     z-index: 9999;
     pointer-events: none;
   }
 
-  /* Seite / Inhalt */
+  /* Page / container */
   .page {
-    /* A4-Breite mit Innenrand; im Browser-Tab zentriert */
+    /* A4 width with inner margin; centered in the browser tab */
     width: 210mm;
     margin: 0 auto;
-    padding: 30mm 15mm 20mm 15mm; /* oben genug Abstand: 30mm wegen Logo */
+    padding: 30mm 15mm 20mm 15mm; /* enough top space: 30mm due to logo */
     box-sizing: border-box;
   }
 
-  /* Titel (Abstand unter Logo) */
+  /* Title (spacing below logo) */
   .doc-title {
-    margin: 0 0 10mm 0;     /* zusätzlicher Abstand unter dem Titel */
-    padding-top: 8mm;        /* noch etwas mehr Luft unter dem fixen Logo */
+    margin: 0 0 10mm 0;     /* extra space below the title */
+    padding-top: 8mm;        /* more room below the fixed logo */
     font-size: 18pt;
     font-weight: 700;
     text-align: center;
     color: #1C2739;
   }
 
-  /* Optional: leichte Tabellen-/Inhalts-Defaults, falls dein contentHtml eigene Tabellen hat */
+  /* Optional: mild table/content defaults, in case contentHtml includes tables */
   .page table {
     width: 100%;
     border-collapse: collapse;
   }
   .page th, .page td {
-    border: 0.2mm solid #2F4871;  /* angelehnt an --card-border-color */
+    border: 0.2mm solid #2F4871;  /* akin to --card-border-color */
     padding: 2mm;
     vertical-align: top;
   }
 
-  /* Druck: gleiche Regeln beibehalten */
+  /* Print: keep the same rules */
   @media print {
     #bbm-logo {
       position: fixed;
@@ -263,7 +323,7 @@ function buildTaskPdfHtml(contentHtml, titleText) {
       height: 14mm;
     }
     .page {
-      width: auto;           /* Druck-Engine nutzt Seitenformat */
+      width: auto;           /* printing engine uses page format */
       margin: 0;
       padding: 30mm 15mm 20mm 15mm;
     }
@@ -271,14 +331,14 @@ function buildTaskPdfHtml(contentHtml, titleText) {
 </style>
 </head>
 <body>
-  <!-- Fixiertes Logo (oben links) -->
+  <!-- Fixed logo (top-left) -->
   <img id="bbm-logo" src="${logoUrl}" alt="BBM Logo">
 
-  <!-- Seite/Container -->
+  <!-- Page container -->
   <main class="page">
     <h1 class="doc-title">${titleText ? String(titleText).replace(/</g,'&lt;') : ''}</h1>
 
-    <!-- Dein Task-HTML unverändert -->
+    <!-- Your task HTML, unchanged -->
     <div class="content">
       ${contentHtml || ''}
     </div>
@@ -287,6 +347,23 @@ function buildTaskPdfHtml(contentHtml, titleText) {
 </html>`;
 }
 
+/**
+ * Minimal task shape for board tabular export.
+ * @typedef {Object} ExportTask
+ * @property {string} [title]
+ * @property {{ fullname?: string }} [assignee]
+ * @property {{ fullname?: string }} [reviewer]
+ * @property {string} [priority]
+ * @property {string} [due_date]
+ */
+
+/**
+ * Renders a status section (heading + table) for a list of tasks.
+ *
+ * @param {string} status - Status name (e.g., "to-do", "in-progress").
+ * @param {ExportTask[]} tasks - Tasks belonging to the given status.
+ * @returns {string} HTML string for the status block (empty string if no tasks).
+ */
 function renderStatusTable(status, tasks) {
     if (!tasks.length) return '';
     const rows = tasks.map(t => `
@@ -307,6 +384,12 @@ function renderStatusTable(status, tasks) {
       </table>`;
 }
 
+/**
+ * Dynamically loads the html2pdf bundle (via CDN) if not already available.
+ * Exposes `window.html2pdf`.
+ *
+ * @returns {Promise<void>} Resolves once the script has been loaded.
+ */
 async function loadHtml2Pdf() {
     return new Promise(res => {
         const s = document.createElement('script');

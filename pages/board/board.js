@@ -83,20 +83,13 @@ function cleanCurrentTask() {
  */
 async function init() {
     await setBoard();
-
-    // Board-Objekt global bereitstellen (für evtl. andere Tools)
     window.currentBoard = currentBoard;
-
     cleanCurrentTask();
     renderAllTasks();
     renderMemberList();
     renderTitle();
-
-    // PDF-Download im Seiten-Header ausblenden (Export erfolgt pro Task im Dialog)
     const hdrBtn = document.getElementById('pdf-download-btn');
     if (hdrBtn) hdrBtn.style.display = 'none';
-
-    // ▼ NEU: GFX-Manual-Button je nach Board anzeigen/verlinken
     updateGfxManualButton();
 
     if (getParamFromUrl('task_id')) openTaskDetailDialog(getParamFromUrl('task_id'));
@@ -183,8 +176,6 @@ function renderDetailTask() {
     renderDetailTaskDueDate()
     renderDetailTaskPriority()
     renderDetailTaskComments()
-
-    // ▼ NEU: PDF-Buttons (inkl. Detail-Button) binden/anzeigen
     bindPdfButtonsForSfl();
 }
 
@@ -299,24 +290,33 @@ function renderDetailTaskComments() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  GRAPHICS–BOARD DETECTION                                          */
+/*  GRAPHICS–BOARD DETECTION                                          */
 /* ------------------------------------------------------------------ */
 /**
- * Prüft, ob das aktuell geöffnete Board der neue Graphics‑Rapport ist:
- * Erkannt wird es per Titel‑Heuristik (“Graphics …” oder “GFX‑Rapport”).
+ * Checks whether the currently opened board is the new Graphics Report.
+ * Detection is based on a simple title heuristic: either the title starts
+ * with "Graphics" or contains "GFX-Rapport" (case-insensitive).
+ *
+ * @returns {boolean} True if the board title matches the Graphics Report pattern, otherwise false.
  */
 function isGraphicsRapportBoard() {
     if (!currentBoard?.title) return false;
     const t = currentBoard.title.toLowerCase();
-    return t.startsWith('graphics') || t.includes('gfx‑rapport');
+    return t.startsWith('graphics') || t.includes('gfx-rapport');
 }
 
 /* ------------------------------------------------------------------ */
-/*  DEFAULT‑FORMULAR INJECTOR                                         */
+/*  DEFAULT FORM INJECTOR                                             */
 /* ------------------------------------------------------------------ */
 /**
- * Injiziert das vorbereitete Graphics‑Rapport‑HTML in
- * `currentTask.description`, sofern das Board ein Graphics‑Board ist.
+ * Injects the prebuilt Graphics Report HTML into `currentTask.description`
+ * if the current board is detected as a Graphics Report board.
+ *
+ * Relies on:
+ * - {@link isGraphicsRapportBoard} to detect board type.
+ * - `window.GRAPHICS_RAPPORT_FORM_HTML` holding the HTML template string.
+ *
+ * @returns {void}
  */
 function setDefaultDescriptionForGraphics() {
     if (isGraphicsRapportBoard() && window.GRAPHICS_RAPPORT_FORM_HTML) {
@@ -325,12 +325,17 @@ function setDefaultDescriptionForGraphics() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  GFX Manual Button – Sichtbarkeit & Link                            */
+/*  GFX Manual Button – Visibility & Link                             */
 /* ------------------------------------------------------------------ */
 /**
- * Blendet den GFX‑Manual‑Button im Board‑Header ein/aus und setzt den Link.
- * – sichtbar NUR in Grafik‑Boards (isGraphicsRapportBoard())
- * – Link aus GFX_MANUAL_URL (config.js), Fallback: /manuals/bbm_gfx_manual.pdf
+ * Toggles the visibility of the GFX Manual button in the board header
+ * and sets its link target.
+ *
+ * - Visible ONLY for graphics boards (detected via {@link isGraphicsRapportBoard})
+ * - Link taken from `GFX_MANUAL_URL` (defined in config.js)
+ * - Fallback link: `/manuals/bbm_gfx_manual.pdf`
+ *
+ * @returns {void}
  */
 function updateGfxManualButton() {
     const btn = document.getElementById('gfx-manual-btn');
@@ -342,29 +347,32 @@ function updateGfxManualButton() {
             ? GFX_MANUAL_URL
             : '/manuals/bbm_gfx_manual.pdf';
         btn.href = url;
-        btn.style.display = 'inline-flex';  // gleiche Optik wie andere Header-Buttons
+        btn.style.display = 'inline-flex';  // match appearance of other header buttons
     } else {
         btn.style.display = 'none';
     }
 }
 
+
 /* ------------------------------------------------------------------ */
-/*  ERSETZTE openCreateTaskDialog()                                   */
+/*  REPLACED openCreateTaskDialog()                                   */
 /* ------------------------------------------------------------------ */
 /**
- * Öffnet den Dialog “Add Task”.
- * Unterstützt jetzt beide Spezial‑Boards:
- *   • Debriefing‑Boards   → `window.DEBRIEFING_FORM_HTML`
- *   • Graphics‑Boards     → `window.GRAPHICS_RAPPORT_FORM_HTML`
+ * Opens the "Add Task" dialog.
+ * Now supports two special board types:
+ *   • Debriefing Boards   → `window.DEBRIEFING_FORM_HTML`
+ *   • Graphics Boards     → `window.GRAPHICS_RAPPORT_FORM_HTML`
  *
- * @param {string} [status] Vorgabe‑Status (“to‑do”, “in‑progress” …)
+ * @param {string} [status] - Optional initial status ("to-do", "in-progress", etc.).
+ *                            Defaults to "to-do" if not provided.
+ * @returns {void}
  */
 function openCreateTaskDialog(status) {
     cleanCurrentTask();
     currentTask.status = status || 'to-do';
 
-    /* ---------- Spezial‑Formulare -------------------------------- */
-    // 1) Swiss‑Football‑League Debriefing
+    /* ---------- Special Forms ------------------------------------ */
+    // 1) Swiss Football League Debriefing
     if (
         currentBoard.title === 'Debriefing – Swiss Football League' &&
         window.DEBRIEFING_FORM_HTML
@@ -372,7 +380,7 @@ function openCreateTaskDialog(status) {
         currentTask.description = window.DEBRIEFING_FORM_HTML;
     }
 
-    // 2) Graphics‑Rapport (NEU)
+    // 2) Graphics Report (NEW)
     setDefaultDescriptionForGraphics();
     /* -------------------------------------------------------------- */
 
@@ -448,8 +456,6 @@ function fillEditCreateTaskDialog(type) {
     renderTaskCreateMemberList()
     setTaskCreateDropdownPrioHeader()
     setSelectAddEditTaskStatusDropdown()
-
-    // Autosave/Freeze bei Blur (wie gehabt)
     const desc = document.getElementById('create_edit_task_description');
     if (!desc.dataset.listenerSet) {
         desc.addEventListener('blur', async e => {
@@ -460,12 +466,9 @@ function fillEditCreateTaskDialog(type) {
         }, true);
         desc.dataset.listenerSet = 'true';
     }
-
-    // ▼ NEU: PDF-Buttons (Edit/Detail) passend zum Board-Typ schalten
     bindPdfButtonsForSfl();
 }
 
-    // ── Task-PDF-Button nur im SFL-Debriefing-Board anzeigen
     const pdfBtn = document.getElementById('task-pdf-btn');
     const title = (currentBoard?.title || '').toLowerCase();
     const isSflDebrief = title.includes('debriefing') && (title.includes('swiss football league') || title.includes('sfl'));
@@ -473,16 +476,12 @@ function fillEditCreateTaskDialog(type) {
     if (pdfBtn) {
         if (isSflDebrief) {
             pdfBtn.style.display = 'inline-flex';
-
-            // Stabiler Click-Handler: vor dem Lesen Freezen, dann Neues-Tab + Print
             window.exportDebriefingTaskPdf = async () => {
                 const descEl = document.getElementById('create_edit_task_description');
-                freezeFormValues(descEl); // Eingaben (checked/value/selected) im HTML verankern
+                freezeFormValues(descEl); 
                 const html = descEl.innerHTML;
                 const base = document.getElementById('create_edit_task_title_input').value || 'debriefing';
-
-                const mod = await import('./pdf_export.js');   // gleiche Ebene wie board.js
-                // Öffnet neues Tab mit Print-Dialog (Benutzer kann „Als PDF sichern“ wählen)
+                const mod = await import('./pdf_export.js'); 
                 mod.exportDebriefingTaskPdf(html, base);
             };
         } else {
@@ -490,32 +489,66 @@ function fillEditCreateTaskDialog(type) {
         }
     }
 
+/**
+ * Checks whether the current board title matches the pattern
+ * for an SFL (Swiss Football League) Debriefing board.
+ *
+ * The detection is case-insensitive and returns true if:
+ * - The title contains "debriefing", AND
+ * - The title contains either "swiss football league" or "sfl".
+ *
+ * @returns {boolean} True if the board title matches the SFL Debriefing pattern, otherwise false.
+ */
 function isSflDebriefBoardTitle() {
     const t = (currentBoard?.title || '').toLowerCase();
-    return t.includes('debriefing') && (t.includes('swiss football league') || t.includes('sfl'));
+    return t.includes('debriefing') &&
+           (t.includes('swiss football league') || t.includes('sfl'));
 }
 
-
+/**
+ * Exports the current Debriefing task as a PDF.
+ *
+ * Determines whether the edit dialog is open or the detail view is active,
+ * selects the appropriate description container, and (if in edit mode)
+ * freezes form values into the DOM so they are included in the export HTML.
+ * Then calls the `exportDebriefingTaskPdf` function from `pdf_export.js`.
+ *
+ * @async
+ * @returns {Promise<void>} Resolves once the export process has been triggered.
+ */
 async function exportDebriefingTaskPdf() {
-    // Erkennen, welcher Dialog offen ist
-    const editOpen = document.getElementById('create_edit_task_dialog')?.getAttribute('current_dialog') === 'true';
-    const rootId   = editOpen ? 'create_edit_task_description' : 'detail_task_description';
+    const editOpen = document
+        .getElementById('create_edit_task_dialog')
+        ?.getAttribute('current_dialog') === 'true';
+
+    const rootId = editOpen
+        ? 'create_edit_task_description'
+        : 'detail_task_description';
 
     const el = document.getElementById(rootId);
     if (!el) return;
 
-    // Im Edit-Dialog Eingaben "einfrieren", damit sie im HTML landen
     if (editOpen) freezeFormValues(el);
 
-    const html      = el.innerHTML;
-    const baseTitle = document.getElementById('create_edit_task_title_input')?.value
-                   || currentTask?.title
-                   || 'debriefing';
+    const html = el.innerHTML;
+    const baseTitle =
+        document.getElementById('create_edit_task_title_input')?.value ||
+        currentTask?.title ||
+        'debriefing';
 
     const mod = await import('./pdf_export.js');
     mod.exportDebriefingTaskPdf(html, baseTitle);
 }
 
+/**
+ * Binds the PDF export buttons for SFL Debriefing boards.
+ *
+ * - Checks if the current board is an SFL Debriefing board (via {@link isSflDebriefBoardTitle}).
+ * - Shows or hides the edit and detail PDF buttons accordingly.
+ * - Assigns the {@link exportDebriefingTaskPdf} function to the click handler of each button.
+ *
+ * @returns {void}
+ */
 function bindPdfButtonsForSfl() {
     const isSfl = isSflDebriefBoardTitle();
     const editBtn   = document.getElementById('task-pdf-btn');
@@ -1029,60 +1062,78 @@ async function openEditBoardDialog() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Serialisiert Inputs & Selects in der Description‑Area             */
+/*  Serializes inputs & selects in the description area                */
 /* ------------------------------------------------------------------ */
 /**
- * Schreibt den aktuellen Zustand aller Formular‑Elemente
- * (checkbox, radio, select, input[type=text|date], textarea)
- * als Attribute in das DOM, damit innerHTML ihn enthält.
+ * Writes the current state of all form controls
+ * (checkbox, radio, select, input[type=text|date|number|...], textarea)
+ * back into the DOM as attributes so that `element.innerHTML` contains the
+ * actual, user‑edited values (useful for exports, cloning, or persistence).
  *
- * @param {HTMLElement} root – der Editor‑Container
+ * - For checkboxes/radios: toggles the `checked` attribute.
+ * - For text/number/date inputs: mirrors the live value into the `value` attribute.
+ * - For selects: marks the currently selected `<option>` elements via `selected`.
+ * - For textareas: moves the `.value` into textContent so the serialized HTML includes it.
+ *
+ * @param {HTMLElement} root - The editor container that holds the form elements.
+ * @returns {void}
  */
-function freezeFormValues(root){
-    if(!root) return;
+function freezeFormValues(root) {
+    if (!root) return;
 
-    // ► Checkboxen & Radiobuttons
+    // Checkboxes & radio buttons → reflect live state in the `checked` attribute
     root.querySelectorAll('input[type="checkbox"],input[type="radio"]')
-        .forEach(inp=>{
-            if(inp.checked){
-                inp.setAttribute('checked','');
-            }else{
+        .forEach(inp => {
+            if (inp.checked) {
+                inp.setAttribute('checked', '');
+            } else {
                 inp.removeAttribute('checked');
             }
         });
 
-    // ► Text‑, Zahl‑, Date‑Inputs
+    // Text/number/date/... inputs → mirror `.value` into the `value` attribute
     root.querySelectorAll('input:not([type="checkbox"]):not([type="radio"])')
-        .forEach(inp=>{
+        .forEach(inp => {
             inp.setAttribute('value', inp.value);
         });
 
-    // ► Select‑Felder
-    root.querySelectorAll('select').forEach(sel=>{
-        Array.from(sel.options).forEach(opt=>{
-            if(opt.selected){
-                opt.setAttribute('selected','');
-            }else{
+    // Select elements → mark the selected <option> via the `selected` attribute
+    root.querySelectorAll('select').forEach(sel => {
+        Array.from(sel.options).forEach(opt => {
+            if (opt.selected) {
+                opt.setAttribute('selected', '');
+            } else {
                 opt.removeAttribute('selected');
             }
         });
     });
 
-    // ► Textareas
-    root.querySelectorAll('textarea').forEach(ta=>{
+    // Textareas → ensure textContent matches the current `.value`
+    root.querySelectorAll('textarea').forEach(ta => {
         ta.textContent = ta.value || ta.textContent;
     });
 }
 
-/* ───────── Our‑Portfolio Marquee ───────── */
-function initPortfolioMarquee(){
+/* ───────── Our‑Portfolio Marquee ───────── */
+/**
+ * Initializes the marquee for the `.portfolio-track` list.
+ * Rebuilds the track from its original items, inserts a banner after every 7 items,
+ * duplicates the sequence for an infinite loop, and sets CSS variables for distance
+ * and duration based on the computed width.
+ *
+ * Expects accompanying CSS to animate using:
+ *   --marquee-distance and --marquee-duration
+ *
+ * @returns {void}
+ */
+function initPortfolioMarquee() {
     const track = document.querySelector('.portfolio-track');
-    if(!track) return;
+    if (!track) return;
 
-    /* 1. Original‑Items sammeln */
+    /* 1. Collect original items */
     const originalItems = Array.from(track.children).map(li => li.textContent.trim());
 
-    /* 2. Track leeren & neu aufbauen  */
+    /* 2. Clear the track & rebuild */
     track.innerHTML = '';
     let counter = 0;
 
@@ -1097,26 +1148,26 @@ function initPortfolioMarquee(){
         </span>`;
 
     originalItems.forEach((txt, idx) => {
-        /* Event‑Item anlegen */
+        /* Create the event item */
         const li = document.createElement('li');
         li.textContent = txt;
-        if(idx % 2 === 1) li.classList.add('portfolio-item-alt');   // abwechselnd gelb
+        if (idx % 2 === 1) li.classList.add('portfolio-item-alt');   // alternate highlight
         track.appendChild(li);
         counter++;
 
-        /* Nach jedem 7. Inhalt → Banner einfügen */
-        if(counter % 7 === 0){
+        /* Insert a banner after every 7 items */
+        if (counter % 7 === 0) {
             const bannerLi = document.createElement('li');
             bannerLi.innerHTML = bannerHTML;
             track.appendChild(bannerLi);
         }
     });
 
-    /* 3. Duplizieren → endloser Loop */
+    /* 3. Duplicate sequence → infinite loop */
     track.innerHTML += track.innerHTML;
 
-    /* 4. Marquee‑Variablen setzen */
-    const SPEED = 60;                       // px / sec
+    /* 4. Set marquee CSS variables (distance & duration) */
+    const SPEED = 60;                       // px / second
     const trackWidth = track.scrollWidth / 2;
     const duration = trackWidth / SPEED;
 
@@ -1124,5 +1175,5 @@ function initPortfolioMarquee(){
     track.style.setProperty('--marquee-duration', `${duration}s`);
 }
 
-/* nach DOM‑Load */
+/* After DOM load, initialize the marquee */
 window.addEventListener('load', initPortfolioMarquee);

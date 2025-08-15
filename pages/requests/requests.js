@@ -1,15 +1,68 @@
 /**
- * DEMO: statische Requests ohne Backend.
- * Start immer 15:00, End 20:00, Location fix "ROC Sissach".
+ * @file requests_demo.js
+ * @summary Demo: static requests without a backend (UI-only).
+ * @description
+ * Provides a small in-memory/LocalStorage–backed request list to demonstrate
+ * rendering, filtering and inline status updates for assignments.
+ * Defaults:
+ *  - Start: 15:00
+ *  - End:   20:00
+ *  - Location: "ROC Sissach"
+ * Status is optionally persisted under {@link STORE_KEY} in LocalStorage.
  */
 
+/**
+ * Default start time (HH:mm).
+ * @type {string}
+ */
 const DEFAULT_START = "15:00";
+
+/**
+ * Default end time (HH:mm).
+ * @type {string}
+ */
 const DEFAULT_END   = "20:00";
+
+/**
+ * Default location label.
+ * @type {string}
+ */
 const DEFAULT_LOCATION = "ROC Sissach";
+
+/**
+ * LocalStorage key for persisting request status values.
+ * @type {string}
+ */
 const STORE_KEY = "bbm-requests-demo-status";
 
-/** Vier Beispiel-Einsätze */
-const sampleRequests = [
+/**
+ * Allowed request statuses.
+ * @typedef {'open'|'accepted'|'declined'} RequestStatus
+ */
+
+/**
+ * Shape of a single demo request entry.
+ * @typedef {Object} Request
+ * @property {string} id
+ * @property {string} dateISO - Date in ISO format (YYYY-MM-DD).
+ * @property {string} function - Task function/role (e.g., "Camera 2").
+ * @property {string} project  - Project label.
+ * @property {string} start    - Start time (HH:mm).
+ * @property {string} end      - End time (HH:mm).
+ * @property {string} location - Location label (short).
+ * @property {RequestStatus} status
+ * @property {string} meeting_point
+ * @property {string} vehicle_out
+ * @property {string} vehicle_return
+ * @property {string} hotel
+ * @property {string} shuttle
+ * @property {string} deployment_location
+ * @property {string} order_number
+ */
+
+/** Four example requests. */
+const sampleRequests =
+/** @type {Request[]} */ ([
   {
     id: "r1",
     dateISO: "2025-09-05",                    // Friday
@@ -18,7 +71,7 @@ const sampleRequests = [
     start: DEFAULT_START,
     end: DEFAULT_END,
     location: DEFAULT_LOCATION,
-    status: "accepted",                       // vorgewählt (grün)
+    status: "accepted",                       // preselected (green)
     meeting_point: "-",
     vehicle_out: "-",
     vehicle_return: "-",
@@ -35,7 +88,7 @@ const sampleRequests = [
     start: DEFAULT_START,
     end: DEFAULT_END,
     location: DEFAULT_LOCATION,
-    status: "open",                           // (gelb)
+    status: "open",                           // (yellow)
     meeting_point: "-",
     vehicle_out: "-",
     vehicle_return: "-",
@@ -52,7 +105,7 @@ const sampleRequests = [
     start: DEFAULT_START,
     end: DEFAULT_END,
     location: DEFAULT_LOCATION,
-    status: "accepted",                       // vorgewählt (grün)
+    status: "accepted",                       // preselected (green)
     meeting_point: "-",
     vehicle_out: "-",
     vehicle_return: "-",
@@ -69,7 +122,7 @@ const sampleRequests = [
     start: DEFAULT_START,
     end: DEFAULT_END,
     location: DEFAULT_LOCATION,
-    status: "open",                           // (gelb)
+    status: "open",                           // (yellow)
     meeting_point: "-",
     vehicle_out: "-",
     vehicle_return: "-",
@@ -78,19 +131,32 @@ const sampleRequests = [
     deployment_location: "ROC Sissach",
     order_number: "ORD-2404"
   }
-];
+]);
 
-/** Laufende Liste im UI */
+/**
+ * Current list in the UI (after hydration/filtering).
+ * @type {Request[]}
+ */
 let requestList = [];
 
-/** Format: 'Friday, 5.9.2025' */
+/**
+ * Formats an ISO date string into a human-friendly label like "Friday, 5.9.2025".
+ *
+ * @param {string} iso - ISO date string (YYYY-MM-DD).
+ * @returns {string} Human-readable date.
+ */
 function formatDateNice(iso) {
   const d = new Date(iso + "T00:00:00");
   const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
   return `${days[d.getDay()]}, ${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()}`;
 }
 
-/** Persistierte Status (optional) laden/mergen */
+/**
+ * Merges persisted status values from LocalStorage (if any) into the given list.
+ *
+ * @param {Request[]} list - Source list to hydrate.
+ * @returns {Request[]} New list with status possibly overridden from storage.
+ */
 function hydrateFromStorage(list) {
   try {
     const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
@@ -99,6 +165,14 @@ function hydrateFromStorage(list) {
     return list;
   }
 }
+
+/**
+ * Persists the status for a single request into LocalStorage.
+ *
+ * @param {string} id - Request id.
+ * @param {RequestStatus} status - New status to persist.
+ * @returns {void}
+ */
 function persistStatus(id, status) {
   try {
     const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
@@ -107,14 +181,26 @@ function persistStatus(id, status) {
   } catch {}
 }
 
-/** Init & Render */
+/**
+ * Initializes (fetches demo data) and renders the request list.
+ * No backend is called; uses {@link sampleRequests}.
+ *
+ * @returns {Promise<void>}
+ */
 async function getAndRenderRequestList() {
-  // Kein Backend: wir nehmen die Samples
+  // No backend: use samples
   requestList = hydrateFromStorage(sampleRequests);
   renderRequestList();
 }
 
-/** Suche + Render */
+/**
+ * Filters by a free-text query (matches date label, function, project, location, status)
+ * and renders the table body with the result set.
+ *
+ * Uses input value from `#request_search` and writes rows to `#request_list`.
+ *
+ * @returns {void}
+ */
 function renderRequestList() {
   const tbody = document.getElementById("request_list");
   const q = (document.getElementById("request_search")?.value || "").trim().toLowerCase();
@@ -135,7 +221,14 @@ function renderRequestList() {
   tbody.innerHTML = filtered.map(getRequestListEntryTemplate).join("");
 }
 
-/** Einzelzeile */
+/**
+ * Renders a single table row for a request.
+ *
+ * @param {Request} r - Request entry.
+ * @returns {string} HTML string for the `<tr>`.
+ *
+ * @see renderStatusBtn
+ */
 function getRequestListEntryTemplate(r) {
   const date = formatDateNice(r.dateISO);
   const statusDotClass = r.status === "accepted" ? "status-accepted"
@@ -172,6 +265,14 @@ function getRequestListEntryTemplate(r) {
   </tr>`;
 }
 
+/**
+ * Builds a status toggle button (Open/Accepted/Declined) for a given request id.
+ *
+ * @param {string} id - Request id to update when clicked.
+ * @param {RequestStatus} kind - Target status represented by the button.
+ * @param {RequestStatus} current - Current status, used to mark the active button.
+ * @returns {string} HTML string for the `<button>`.
+ */
 function renderStatusBtn(id, kind, current) {
   const label = kind.charAt(0).toUpperCase() + kind.slice(1); // Open/Accepted/Declined
   const active = current === kind ? "active" : "";
@@ -181,14 +282,25 @@ function renderStatusBtn(id, kind, current) {
   return `<button class="status-btn ${cls} ${active}" onclick="setStatus('${id}','${kind}')">${label}</button>`;
 }
 
-/** Status umschalten */
+/**
+ * Updates a request's status in the in-memory list, persists it, and re-renders.
+ *
+ * @param {string} id - Request id.
+ * @param {RequestStatus} newStatus - New status value.
+ * @returns {void}
+ */
 function setStatus(id, newStatus) {
   requestList = requestList.map(r => r.id === id ? { ...r, status: newStatus } : r);
   persistStatus(id, newStatus);
   renderRequestList();
 }
 
-// Exporte (optional global, wegen inline onclick):
+/**
+ * Optional globals (used by inline `onclick` handlers).
+ * @type {(typeof getAndRenderRequestList)}
+ */
 window.getAndRenderRequestList = getAndRenderRequestList;
+/** @type {(typeof renderRequestList)} */
 window.renderRequestList = renderRequestList;
+/** @type {(id:string, status:RequestStatus) => void} */
 window.setStatus = setStatus;

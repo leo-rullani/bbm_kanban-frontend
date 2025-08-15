@@ -306,7 +306,7 @@ function redirectToDashboard(manual = false) {
   }
 }
 
-// Für manuelle Klicks (Header-Logo, Menü) immer explizit manuell aufrufen:
+// manual clicks
 function goDashboard() {
   return redirectToDashboard(true);
 }

@@ -1,11 +1,11 @@
-/* ------------------------------------------------------------------ */
-/*  Graphics‑Rapport – HTML‑Snippet                                   */
-/*  ▸ wird bei Task‑Erstellung per board.js in currentTask.description */
-/*    injiziert, wenn das Board als Graphics‑Rapport erkannt wurde.    */
+/* ----------------------------------------------------------------- - */
+/*  Graphics report – HTML snippet                                   */
+/*  ▸ is injected into currentTask.description when a task is created via board.js */
+/*    if the board has been recognized as a graphics report.    */
 /* ------------------------------------------------------------------ */
 (function () {
 
-    /* ---------- Hilfs‑Selects ------------------------------------ */
+    /* ---------- help selects ------------------------------------ */
     const yesNoSelect = `
         <select class="rapport_select">
             <option value="" selected>-</option>
@@ -145,7 +145,7 @@
 </table>`;
 
     /* -------------------------------------------------------------- */
-    /*  Globale Bereitstellung                                        */
+    /*  global provision                           */
     /* -------------------------------------------------------------- */
     if (typeof window !== 'undefined') {
         window.GRAPHICS_RAPPORT_FORM_HTML = GRAPHICS_RAPPORT_FORM_HTML;

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Home</title>
+    <title>JSDoc: Source: dashboard/dashboard_charts.js</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,442 +17,160 @@
 
 <div id="main">
 
-    <h1 class="page-title">Home</h1>
-
-    
-
-
-
-    
-
-
-    <h3> </h3>
-
-
-
-
-
-
-
-
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-<section>
-
-<header>
-    
-        <h2>auth/mouse_trail.js</h2>
-        
-    
-</header>
-
-<article>
-    <div class="container-overview">
-    
-        
-            <div class="description">Injects a `.trail-wrapper` with five `<img>` elements into the `#xy` container,
-animates them with `mousemove` and applies an idle fade-out. The feature is
-permanently disabled once a login/signup field receives focus. It also toggles
-automatically on window `resize` depending on the viewport width.</div>
-        
-
-        
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-author">Author:</dt>
-    <dd class="tag-author">
-        <ul>
-            <li>Leugzim Rullani</li>
-        </ul>
-    </dd>
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="auth_mouse_trail.js.html">auth/mouse_trail.js</a>, <a href="auth_mouse_trail.js.html#line1">line 1</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-        
-    
-    </div>
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-</article>
-
-</section>
-
-
-
-
-
-
-
-<section>
-
-<header>
-    
-        <h2>board/board_templates.js</h2>
-        
-    
-</header>
-
-<article>
-    <div class="container-overview">
-    
-        
-            <div class="description">Provides small, framework-agnostic string template builders for:
- - Member profile circles (limited to 4 with "+X" overflow indicator)
- - Task detail person blocks (assignee/reviewer)
- - Single comment entries with optional delete button
- - Kanban task cards, including optional SFL Debriefing PDF export button
- - Move button group for changing task status
-Includes a few helpers for SFL board detection, safe HTML preview extraction, and PDF export.</div>
-        
-
-        
-
-
-<dl class="details">
-
-    
-    <dt class="tag-version">Version:</dt>
-    <dd class="tag-version"><ul class="dummy"><li>1.0.0</li></ul></dd>
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-author">Author:</dt>
-    <dd class="tag-author">
-        <ul>
-            <li>Leugzim Rullani</li>
-        </ul>
-    </dd>
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="board_board_templates.js.html">board/board_templates.js</a>, <a href="board_board_templates.js.html#line1">line 1</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-        
-    
-    </div>
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-</article>
-
-</section>
-
-
-
-
-
-
-
-<section>
-
-<header>
-    
-        <h2>board/pdf_export.js</h2>
-        
-    
-</header>
-
-<article>
-    <div class="container-overview">
-    
-        
-            <div class="description">Provides functions to open a print-ready popup with task HTML (user chooses "Save as PDF"),
-plus an optional board‑wide export via html2pdf. Includes helpers to read CSS variables
-from the host app and generate a self-contained CSS block for the PDF document.
-
-Exports:
- - exportDebriefingTaskPdf: open a new tab with app-like styling and trigger print
- - <a href="global.html#downloadDebriefingPdf">downloadDebriefingPdf</a>: download an aggregated PDF for the whole board (html2pdf)</div>
-        
-
-        
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="board_pdf_export.js.html">board/pdf_export.js</a>, <a href="board_pdf_export.js.html#line1">line 1</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-        
-    
-    </div>
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-</article>
-
-</section>
-
-
-
-
-
-
-
-<section>
-
-<header>
-    
-        <h2>requests/requests.js</h2>
-        
-    
-</header>
-
-<article>
-    <div class="container-overview">
-    
-        
-            <div class="description">Provides a small in-memory/LocalStorage–backed request list to demonstrate
-rendering, filtering and inline status updates for assignments.
-Defaults:
- - Start: 15:00
- - End:   20:00
- - Location: "ROC Sissach"
-Status is optionally persisted under <a href="global.html#STORE_KEY">STORE_KEY</a> in LocalStorage.</div>
-        
-
-        
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="requests_requests.js.html">requests/requests.js</a>, <a href="requests_requests.js.html#line1">line 1</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-        
-    
-    </div>
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-</article>
-
-</section>
+    <h1 class="page-title">Source: dashboard/dashboard_charts.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * Draws a pie chart (doughnut) representing the status of assigned tickets.
+ * If no tickets are assigned, displays a placeholder message.
+ * @param {Array&lt;number>} currentAssignedTickets - Array with ticket counts for each status.
+ */
+function drawPieChart(currentAssignedTickets) {
+    let ticketData = getPieChartData(currentAssignedTickets)
+    let labels = ['To-do', 'In progress', 'Review', 'Done'];
+
+    if (ticketData.every(val => val === 0)) {
+        ticketData = [1];
+        labels = ['No tasks assigned'];
+    }
+
+    const ctx = document.getElementById('ticketsChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: ticketData,
+                backgroundColor: ['#8E44AD', '#F1C40F', '#E67E22', '#3498DB'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: 'white',
+                        usePointStyle: true,
+                        pointStlye: 'circle',
+                    }
+                }
+            }
+        }
+    });
+};
+
+/**
+ * Returns an array of ticket counts for each status used in the pie chart.
+ * @param {Array&lt;Object>} currentAssignedTickets - Array of ticket objects with a status property.
+ * @returns {Array&lt;number>} Array with counts for ['to-do', 'in-progress', 'review', 'done'].
+ */
+function getPieChartData(currentAssignedTickets) {
+    return [
+        currentAssignedTickets.filter(task => task.status == "to-do").length,
+        currentAssignedTickets.filter(task => task.status == "in-progress").length,
+        currentAssignedTickets.filter(task => task.status == "review").length,
+        currentAssignedTickets.filter(task => task.status == "done").length,
+    ]
+}
+
+/**
+ * Draws a custom wave chart to visualize the progress percentage.
+ * If progress is invalid, displays a fallback message.
+ * @param {number} progress - The progress value (expected between 0 and 100).
+ */
+function drawWaveChart(progress) {
+    let progressIsValid = true;
+    if (progress &lt; 0 || progress > 100 || isNaN(progress)) {
+        progress = 0;
+        progressIsValid = false;
+    }
+    const ctx = document.getElementById("waveChart").getContext("2d");
+    const wavePlugin = {
+        id: 'waveProgress',
+        beforeDraw(chart) {
+            const { ctx, chartArea: { left, right, top, bottom }, scales: { x } } = chart;
+            const width = right - left;
+            const height = bottom - top;
+            const progressX = left + (width * (progress / 100));
+
+            ctx.save();
+
+            // Wave strokes
+            function drawWave(color, startX, endX) {
+                ctx.beginPath();
+                ctx.moveTo(startX, bottom - height / 2);
+                const waveLength = 90;  // Wavelength
+                const amplitude = 10;   // Wavehight
+
+                for (let x = startX; x &lt;= endX; x += 2) {
+                    const y = bottom - height / 2 + Math.sin((x / waveLength) * Math.PI * 2) * amplitude;
+                    ctx.lineTo(x, y);
+                }
+
+                ctx.lineWidth = 8;
+                ctx.strokeStyle = color;
+                ctx.stroke();
+            }
+
+            drawWave("#FFD700", left, progressX);
+            drawWave("#345678", progressX, right);
+
+            // Progress Text - Currently aligned in center
+            ctx.fillStyle = "#FFD700";
+            ctx.font = "16px Arial";
+            ctx.textAlign = "center";
+            let text = progressIsValid ? progress.toFixed(2) + "%" : "No Tasks found";
+            ctx.fillText(text, left + width / 2, bottom - height / 2 - 20);
+
+            // Numbers left and right
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "14px Arial";
+            ctx.textAlign = "left";
+            ctx.fillText("0", left, bottom);
+            ctx.textAlign = "right";
+            ctx.fillText("100", right, bottom);
+
+            ctx.restore();
+        }
+    };
+
+    new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: ["Fortschritt"],
+            datasets: [{
+                label: "Tasks Resolved",
+                data: [progress],
+                backgroundColor: "rgba(0, 0, 0, 0)",
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            height: 100,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: { display: false },
+                y: { display: false }
+            }
+        },
+        plugins: [wavePlugin]
+    });
+    ;
+}</code></pre>
+        </article>
+    </section>
 
 
 

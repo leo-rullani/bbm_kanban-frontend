@@ -8,8 +8,6 @@
  * automatically on window `resize` depending on the viewport width.
  *
  * @author Leugzim Rullani
- * @version 1.0.0
- * @since 2025-08-15
  */
 
 /**

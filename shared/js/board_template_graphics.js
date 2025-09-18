@@ -832,6 +832,18 @@ function attachKitsButton() {
     setManual(clubId, newOrder);
   }
 
+  /* ---------- Data loader (API / Stub) ---------- */
+  async function fetchStaff(clubId) {
+    try {
+      const resp = await fetch(`/api/roster?club=${encodeURIComponent(clubId)}`, { credentials: 'include' });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const json = await resp.json();
+      if (Array.isArray(json?.players)) return json.players;
+    } catch (e) {
+      return [];
+    }
+  }
+
   /* ---------- Button neben „GFX‑Manual“ ---------- */
   function attachRosterButton() {
     if (document.querySelector('.gfx-roster-btn')) return;

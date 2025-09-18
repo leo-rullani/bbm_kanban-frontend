@@ -259,7 +259,7 @@
       <div class="gfx-kits-sheet" role="dialog" aria-modal="true" aria-label="Kits">
         <div class="gfx-kits-head">
           <img src="${LEAGUE_LOGO}" alt="Brack Super League">
-          <div class="gfx-kits-title">Trikotübersicht Brack Super League</div>
+          <div class="gfx-kits-title">Jersey overview Brack Super League season 2025/2026</div>
           <button class="gfx-kits-close" type="button" aria-label="Close">✕</button>
         </div>
         <div id="gfx-kits-body"></div>
@@ -488,16 +488,16 @@ function attachKitsButton() {
 })();
 
 /* ------------------------------------------------------------------
-   Graphics board – Overlay "Staff & Player Pics" (nur Liste)
-   Columns: # | Name | Vorname | On‑Air | Portrait
-   Toolbar: ＋ Zeile  |  # ↑ sortieren
+   Graphics board – Overlay "Staff & Player Pics" (list only)
+   Columns: # | Last name | First name | On‑Air | Portrait | Delete
+   Toolbar: ＋ Row  |  # ↑ Sort
 ------------------------------------------------------------------ */
 (function () {
   const ICON_BASE   = '../../assets/icons/';
   const LEAGUE_LOGO = ICON_BASE + 'brack_super_league.svg.png';
-  const STATE_KEY   = 'bbm.staff.v1'; // Persistenz-Key
+  const DELETE_ICON = ICON_BASE + 'delete.svg';
+  const STATE_KEY   = 'bbm.staff.v1'; // Persisted state (players, manual, hidden)
 
-  // Vereine (wie bei KITS), inkl. Primärfarbe (für Hover)
   const CLUBS = [
     { id: 'fcb',      name: 'FC Basel 1893',            file: 'fcb.png',             color: '#ff0000' },
     { id: 'fcluzern', name: 'FC Luzern',                file: 'fcluzern.svg.png',    color: '#1e467d' },
@@ -516,12 +516,10 @@ function attachKitsButton() {
   /* ---------- Utils ---------- */
   function normHex(v){ if(!v) return ''; let s=String(v).trim().replace(/^#/, ''); if(/^[0-9a-f]{3}$/i.test(s)) s=s.split('').map(ch=>ch+ch).join(''); return /^[0-9a-f]{6}$/i.test(s) ? '#'+s.toLowerCase() : ''; }
   function bestTextColor(hex){
-    const h = (hex||'#000').replace('#','');
-    const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16);
+    const h = (hex||'#000').replace('#',''); const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16);
     const toLin = v => (v<=10) ? v/3294 : Math.pow((v/255 + 0.055)/1.055, 2.4);
     const L = 0.2126*toLin(r) + 0.7152*toLin(g) + 0.0722*toLin(b);
-    const white = 1.05/(L+0.05), black = (L+0.05)/0.05;
-    return white>black ? '#FFFFFF' : '#000000';
+    return (1.05/(L+0.05) > (L+0.05)/0.05) ? '#FFFFFF' : '#000000';
   }
   function escapeHtml(s){ return String(s ?? '').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
   function asInt(v){ const n = parseInt(String(v).trim(),10); return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY; }
@@ -532,7 +530,7 @@ function attachKitsButton() {
     const css = `
       #gfx-staff-overlay{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);}
       #gfx-staff-overlay.show{display:flex;}
-      .gfx-staff-sheet{width:min(1100px,96vw);max-height:96vh;overflow:auto;background:#0f1525;color:#e5e7eb;border-radius:12px;box-shadow:0 18px 64px rgba(0,0,0,.55);padding:18px 18px 22px;}
+      .gfx-staff-sheet{width:min(1120px,96vw);max-height:96vh;overflow:auto;background:#0f1525;color:#e5e7eb;border-radius:12px;box-shadow:0 18px 64px rgba(0,0,0,.55);padding:18px 18px 22px;}
       .gfx-staff-head{display:flex;align-items:center;gap:12px;margin-bottom:12px}
       .gfx-staff-head img{height:32px}
       .gfx-staff-title{font-size:18px;font-weight:700;color:var(--font_sec_color)}
@@ -551,18 +549,22 @@ function attachKitsButton() {
       .gfx-staff-table{width:100%;border-collapse:collapse;table-layout:fixed}
       .gfx-staff-table th,.gfx-staff-table td{border:1px solid #233152;padding:8px 10px;text-align:left;font-size:13px;vertical-align:middle}
       .gfx-staff-table th{background:#111a2f;position:sticky;top:0;z-index:1}
-      .col-num{width:70px;text-align:center;font-weight:700}
-      .col-last{width:28%}
+      .col-num{width:88px;text-align:center;font-weight:700}
+      .col-last{width:26%}
       .col-first{width:24%}
-      .col-onair{width:34%}
+      .col-onair{width:30%}
       .col-portrait{width:8%; text-align:center}
+      .col-delete{width:8%; text-align:center}
       .p-onair-input,.p-txt{width:100%;border:1px solid #2b3852;border-radius:6px;padding:8px 10px;background:#0a0f1e;color:#e5e7eb;font-size:14px}
+      .inp-num{font-size:14px;text-align:center} /* same size as names; no spinners because type=text */
       .portrait-wrap{display:flex;align-items:center;justify-content:center}
       .chk-yellow{appearance:none;position:relative;width:20px;height:20px;border-radius:4px;border:1px solid #b38f00;background:#ffdd00;cursor:pointer;display:inline-block;transition:filter .15s ease, transform .1s ease}
       .chk-yellow:hover{filter:brightness(1.05)}
       .chk-yellow:active{transform:scale(0.96)}
       .chk-yellow::after{content:'\\2713'; position:absolute; inset:0; display:grid; place-items:center; color:#111; font-size:15px; font-weight:900; transform:scale(0); transition:transform .12s ease}
       .chk-yellow:checked::after{transform:scale(1)}
+      .btn-del{height:20px;width:20px;cursor:pointer;opacity:.9;transition:transform .12s ease, filter .15s ease}
+      .btn-del:hover{transform:scale(1.06); filter:brightness(1.1)}
       @media (max-width:900px){.gfx-staff-grid{grid-template-columns:repeat(2,1fr)}}
       @media (max-width:560px){.gfx-staff-grid{grid-template-columns:1fr}}
     `;
@@ -581,8 +583,8 @@ function attachKitsButton() {
     ov.innerHTML = `
       <div class="gfx-staff-sheet" role="dialog" aria-modal="true" aria-label="Staff & Player Pics">
         <div class="gfx-staff-head">
-          <img src="${LEAGUE_LOGO}" alt="Brack Super League" style="height:32px;width:auto;">
-          <div class="gfx-staff-title">Staff & Player Pics – Brack Super League</div>
+          <img src="${LEAGUE_LOGO}" alt="Swiss Super League" style="height:32px;width:auto;">
+          <div class="gfx-staff-title">Staff & Player Pics – Swiss Super League</div>
           <div class="gfx-staff-tools"></div>
           <button class="gfx-staff-back" type="button" aria-label="Close">Back</button>
         </div>
@@ -603,13 +605,16 @@ function attachKitsButton() {
       const s = JSON.parse(localStorage.getItem(STATE_KEY)) || {};
       s.players = s.players || {}; // per Spieler (onAir/portrait): key "<club>:<pid>"
       s.manual  = s.manual  || {}; // pro Club: Array manueller Spieler
+      s.hidden  = s.hidden  || {}; // pro Club: Set/Array ausgeblendeter Basis-IDs
       return s;
-    } catch { return { players:{}, manual:{} }; }
+    } catch { return { players:{}, manual:{}, hidden:{} }; }
   }
   function saveState(s) { localStorage.setItem(STATE_KEY, JSON.stringify(s)); }
   function pKey(clubId, playerId) { return `${clubId}:${playerId}`; }
   function getManual(clubId){ const s=loadState(); return Array.isArray(s.manual[clubId]) ? s.manual[clubId] : []; }
   function setManual(clubId, arr){ const s=loadState(); s.manual[clubId]=arr; saveState(s); }
+  function getHidden(clubId){ const s=loadState(); return Array.isArray(s.hidden[clubId]) ? s.hidden[clubId] : []; }
+  function setHidden(clubId, arr){ const s=loadState(); s.hidden[clubId]=arr; saveState(s); }
 
   /* ---------- Grid (Team-Auswahl) ---------- */
   function showGrid() {
@@ -635,7 +640,7 @@ function attachKitsButton() {
     openOverlay();
   }
 
-  /* ---------- Team-Ansicht (nur Tabelle) ---------- */
+  /* ---------- Team-Ansicht ---------- */
   async function showTeam(clubId) {
     const club = CLUBS.find(c => c.id === clubId);
     const body = ensureOverlay().querySelector('#gfx-staff-body');
@@ -651,46 +656,46 @@ function attachKitsButton() {
       </div>
       <table class="gfx-staff-table" id="gfx-staff-table">
         <colgroup>
-          <col class="col-num"><col class="col-last"><col class="col-first"><col class="col-onair"><col class="col-portrait">
+          <col class="col-num"><col class="col-last"><col class="col-first"><col class="col-onair"><col class="col-portrait"><col class="col-delete">
         </colgroup>
         <thead>
           <tr>
             <th>#</th>
-            <th>Name</th>
-            <th>Vorname</th>
+            <th>First name</th>
+            <th>Last name</th>
             <th>On‑Air</th>
             <th>Portrait</th>
+            <th>Delete</th>
           </tr>
         </thead>
         <tbody></tbody>
       </table>`;
 
-    // Toolbar-Buttons
+    // Toolbar
     const tools = ensureOverlay().querySelector('.gfx-staff-tools');
     tools.innerHTML = '';
     const btnAdd  = document.createElement('button');
-    btnAdd.className = 'gfx-staff-btn';
-    btnAdd.textContent = '＋ line';
+    btnAdd.className = 'gfx-staff-btn';  btnAdd.textContent = '＋ Row';
     const btnSort = document.createElement('button');
-    btnSort.className = 'gfx-staff-btn';
-    btnSort.textContent = '# ↑ sort';
-    tools.appendChild(btnAdd);
-    tools.appendChild(btnSort);
+    btnSort.className = 'gfx-staff-btn'; btnSort.textContent = '# ↑ Sort';
+    tools.appendChild(btnAdd); tools.appendChild(btnSort);
 
     const tbody = body.querySelector('tbody');
     const st = loadState();
 
-    // 1) Backend/Stub laden
-    const basePlayers = await fetchStaff(clubId);
-
-    // 2) Manuelle Spieler laden
+    // 1) Base (API/Stub)
+    let basePlayers = await fetchStaff(clubId);
+    // 2) Hidden filter
+    const hidden = new Set(getHidden(clubId));
+    basePlayers = basePlayers.filter(p => !hidden.has(p.id));
+    // 3) Manual
     const manualPlayers = getManual(clubId);
 
-    // 3) Rendern
+    // Render
     basePlayers.forEach(pl => appendRow(tbody, clubId, pl, /*isManual*/false, st));
     manualPlayers.forEach(pl => appendRow(tbody, clubId, pl, /*isManual*/true,  st));
 
-    // Zeile hinzufügen
+    // Add row
     btnAdd.addEventListener('click', () => {
       const man = getManual(clubId);
       const id = `manual-${Date.now()}`;
@@ -699,25 +704,33 @@ function attachKitsButton() {
       appendRow(tbody, clubId, pl, true, loadState());
     });
 
-    // Sortieren
+    // Sort
     btnSort.addEventListener('click', () => {
       sortByNumberAsc(tbody);
-      // Manuelle Reihenfolge persistieren
-      const rows = Array.from(tbody.querySelectorAll('tr[data-manual="1"]'));
-      const newOrder = rows.map(tr => ({
-        id: tr.dataset.id,
-        number: tr.querySelector('.inp-num')?.value || '',
-        last_name: tr.querySelector('.inp-last')?.value || '',
-        first_name: tr.querySelector('.inp-first')?.value || '',
-        on_air_name: tr.querySelector('.p-onair-input')?.value || '',
-        portrait_present: !!tr.querySelector('.chk-yellow')?.checked
-      }));
-      setManual(clubId, newOrder);
+      persistManualOrderFromDOM(tbody, clubId);
     });
 
-    // Änderungen speichern
-    tbody.addEventListener('input', (e) => handleEdit(e, clubId));
+    // Delegation: edits + delete
+    tbody.addEventListener('input',  (e) => handleEdit(e, clubId));
     tbody.addEventListener('change', (e) => handleEdit(e, clubId));
+    tbody.addEventListener('click',  (e) => {
+      const btn = e.target.closest('.btn-del');
+      if (!btn) return;
+      const tr = btn.closest('tr'); if (!tr) return;
+      const isManual = tr.dataset.manual === '1';
+      const pid = tr.dataset.id;
+      if (!pid) return;
+
+      if (isManual) {
+        // Remove from manual list
+        const man = getManual(clubId).filter(x => x.id !== pid);
+        setManual(clubId, man);
+      } else {
+        // Add to hidden list (suppress base row)
+        const h = new Set(getHidden(clubId)); h.add(pid); setHidden(clubId, Array.from(h));
+      }
+      tr.remove();
+    });
 
     openOverlay();
   }
@@ -733,14 +746,19 @@ function attachKitsButton() {
     tr.dataset.manual = isManual ? '1' : '0';
 
     tr.innerHTML = isManual ? `
-      <td class="col-num"><input class="p-txt inp-num" type="number" inputmode="numeric" min="0" step="1" value="${escapeHtml(pl.number||'')}"></td>
-      <td class="col-last"><input class="p-txt inp-last" type="text" value="${escapeHtml(pl.last_name||'')}"></td>
+      <td class="col-num">
+        <input class="p-txt inp-num" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="" value="${escapeHtml(pl.number||'')}" />
+      </td>
+      <td class="col-last"><input class="p-txt inp-last"  type="text" value="${escapeHtml(pl.last_name||'')}"></td>
       <td class="col-first"><input class="p-txt inp-first" type="text" value="${escapeHtml(pl.first_name||'')}"></td>
-      <td class="col-onair"><input class="p-onair-input" type="text" value="${escapeHtml(onAir)}" data-club="${clubId}" data-pid="${pl.id}"></td>
+      <td class="col-onair"><input class="p-onair-input"   type="text" value="${escapeHtml(onAir)}" data-club="${clubId}" data-pid="${pl.id}"></td>
       <td class="col-portrait">
         <div class="portrait-wrap">
           <input class="chk-yellow" type="checkbox" ${portrait ? 'checked' : ''} data-club="${clubId}" data-pid="${pl.id}">
         </div>
+      </td>
+      <td class="col-delete">
+        <img class="btn-del" src="${DELETE_ICON}" alt="Delete row" title="Delete row">
       </td>
     ` : `
       <td class="col-num">${escapeHtml(pl.number ?? '')}</td>
@@ -751,6 +769,9 @@ function attachKitsButton() {
         <div class="portrait-wrap">
           <input class="chk-yellow" type="checkbox" ${portrait ? 'checked' : ''} data-club="${clubId}" data-pid="${pl.id}">
         </div>
+      </td>
+      <td class="col-delete">
+        <img class="btn-del" src="${DELETE_ICON}" alt="Delete row" title="Delete row">
       </td>
     `;
 
@@ -764,6 +785,7 @@ function attachKitsButton() {
     const pid = tr.dataset.id; if (!pid) return;
 
     if (isManual) {
+      // Update full manual record
       const man = getManual(clubId);
       const idx = man.findIndex(x => x.id === pid);
       if (idx !== -1) {
@@ -775,6 +797,7 @@ function attachKitsButton() {
         setManual(clubId, man);
       }
     } else {
+      // Save on-air / portrait for base player
       const s = loadState();
       const key = pKey(clubId, pid);
       s.players[key] = s.players[key] || {};
@@ -796,26 +819,20 @@ function attachKitsButton() {
     rows.forEach(r => tbody.appendChild(r));
   }
 
-  /* ---------- Daten laden (Backend/Stub) ---------- */
-  async function fetchStaff(clubId) {
-    try {
-      const resp = await fetch(`/api/roster?club=${encodeURIComponent(clubId)}`, { credentials: 'include' });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const json = await resp.json();
-      if (Array.isArray(json?.players)) return json.players;
-    } catch (e) {
-      // Fallback (Stub) – hält die UI benutzbar, selbst wenn /api/roster 404 ist
-      if (clubId === 'fcb') {
-        return [
-          { id:'fcb-34', number:34, first_name:'Taulant', last_name:'Xhaka', on_air_name:'T. Xhaka', portrait_present:true },
-          { id:'fcb-20', number:20, first_name:'Fabian',  last_name:'Frei',  on_air_name:'F. Frei',  portrait_present:false }
-        ];
-      }
-      return [];
-    }
+  function persistManualOrderFromDOM(tbody, clubId) {
+    const rows = Array.from(tbody.querySelectorAll('tr[data-manual="1"]'));
+    const newOrder = rows.map(tr => ({
+      id: tr.dataset.id,
+      number: tr.querySelector('.inp-num')?.value || '',
+      last_name: tr.querySelector('.inp-last')?.value || '',
+      first_name: tr.querySelector('.inp-first')?.value || '',
+      on_air_name: tr.querySelector('.p-onair-input')?.value || '',
+      portrait_present: !!tr.querySelector('.chk-yellow')?.checked
+    }));
+    setManual(clubId, newOrder);
   }
 
-  /* ---------- Button neben „GFX‑Manual“ einfügen ---------- */
+  /* ---------- Button neben „GFX‑Manual“ ---------- */
   function attachRosterButton() {
     if (document.querySelector('.gfx-roster-btn')) return;
     const manualBtn = Array.from(document.querySelectorAll('button,a'))
@@ -832,7 +849,7 @@ function attachKitsButton() {
 
   document.addEventListener('DOMContentLoaded', attachRosterButton);
 
-  // Debug/Expose
+  // Expose for debugging
   if (typeof window !== 'undefined') {
     window.showGfxRosterGrid = showGrid;
     window.showGfxRosterTeam = showTeam;

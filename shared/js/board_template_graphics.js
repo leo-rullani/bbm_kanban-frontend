@@ -356,7 +356,7 @@
       <div class="gfx-kits-teamhead">
         <img src="${ICON_BASE + homeClub.file}" alt="${homeClub.name}">
         <strong>${homeClub.name}</strong>
-        <button class="gfx-kits-back" type="button">Zurück</button>
+        <button class="gfx-kits-back" type="button">Back</button>
       </div>
       <table class="gfx-kits-table">
         <thead>
@@ -484,5 +484,357 @@ function attachKitsButton() {
   if (typeof window !== 'undefined') {
     window.showGfxKitsGrid = showGrid;
     window.showGfxKitsTeam = showTeam;
+  }
+})();
+
+/* ------------------------------------------------------------------
+   Graphics board – Overlay "Staff & Player Pics" (nur Liste)
+   Columns: # | Name | Vorname | On‑Air | Portrait
+   Toolbar: ＋ Zeile  |  # ↑ sortieren
+------------------------------------------------------------------ */
+(function () {
+  const ICON_BASE   = '../../assets/icons/';
+  const LEAGUE_LOGO = ICON_BASE + 'brack_super_league.svg.png';
+  const STATE_KEY   = 'bbm.staff.v1'; // Persistenz-Key
+
+  // Vereine (wie bei KITS), inkl. Primärfarbe (für Hover)
+  const CLUBS = [
+    { id: 'fcb',      name: 'FC Basel 1893',            file: 'fcb.png',             color: '#ff0000' },
+    { id: 'fcluzern', name: 'FC Luzern',                file: 'fcluzern.svg.png',    color: '#1e467d' },
+    { id: 'gcz',      name: 'Grasshopper Club Zürich',  file: 'gcz.png',             color: '#005791' },
+    { id: 'ls',       name: 'FC Lausanne‑Sport',        file: 'ls.png',              color: '#00248b' },
+    { id: 'fclugano', name: 'FC Lugano',                file: 'fclugano.svg.png',    color: '#000000' },
+    { id: 'sfc',      name: 'Servette FC',              file: 'sfc.png',             color: '#66202f' },
+    { id: 'fcwin',    name: 'FC Winterthur',            file: 'fcwin.svg.png',       color: '#d21217' },
+    { id: 'fcz',      name: 'FC Zürich',                file: 'fcz.png',             color: '#002855' },
+    { id: 'fcsg',     name: 'FC St. Gallen 1879',       file: 'fcsg.svg.png',        color: '#007c3e' },
+    { id: 'fcthun',   name: 'FC Thun',                  file: 'fcthun.svg',          color: '#ed272d' },
+    { id: 'fcsion',   name: 'FC Sion',                  file: 'fcsion.svg',          color: '#ed2424' },
+    { id: 'yb',       name: 'BSC Young Boys',           file: 'yb.svg.png',          color: '#ffdd00' },
+  ];
+
+  /* ---------- Utils ---------- */
+  function normHex(v){ if(!v) return ''; let s=String(v).trim().replace(/^#/, ''); if(/^[0-9a-f]{3}$/i.test(s)) s=s.split('').map(ch=>ch+ch).join(''); return /^[0-9a-f]{6}$/i.test(s) ? '#'+s.toLowerCase() : ''; }
+  function bestTextColor(hex){
+    const h = (hex||'#000').replace('#','');
+    const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16);
+    const toLin = v => (v<=10) ? v/3294 : Math.pow((v/255 + 0.055)/1.055, 2.4);
+    const L = 0.2126*toLin(r) + 0.7152*toLin(g) + 0.0722*toLin(b);
+    const white = 1.05/(L+0.05), black = (L+0.05)/0.05;
+    return white>black ? '#FFFFFF' : '#000000';
+  }
+  function escapeHtml(s){ return String(s ?? '').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+  function asInt(v){ const n = parseInt(String(v).trim(),10); return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY; }
+
+  /* ---------- Styles ---------- */
+  function injectStaffStyle() {
+    if (document.getElementById('gfx-staff-style')) return;
+    const css = `
+      #gfx-staff-overlay{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);}
+      #gfx-staff-overlay.show{display:flex;}
+      .gfx-staff-sheet{width:min(1100px,96vw);max-height:96vh;overflow:auto;background:#0f1525;color:#e5e7eb;border-radius:12px;box-shadow:0 18px 64px rgba(0,0,0,.55);padding:18px 18px 22px;}
+      .gfx-staff-head{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+      .gfx-staff-head img{height:32px}
+      .gfx-staff-title{font-size:18px;font-weight:700;color:var(--font_sec_color)}
+      .gfx-staff-tools{display:flex;gap:8px;margin-left:12px}
+      .gfx-staff-btn{border:0;border-radius:8px;background:#1f2937;color:#e5e7eb;padding:6px 10px;cursor:pointer}
+      .gfx-staff-btn:hover{filter:brightness(1.05)}
+      .gfx-staff-back{margin-left:auto;border:0;background:#1f2937;color:#e5e7eb;border-radius:8px;padding:6px 10px;cursor:pointer}
+      .club-badge{border-radius:6px;padding:3px 8px;font-weight:600;margin-left:8px}
+      .yb-dark{color:#000}
+      .gfx-staff-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+      .gfx-staff-tile{background:#0b1020;border:1px solid #1f2a44;border-radius:10px;padding:14px;text-align:center;display:grid;gap:8px;cursor:pointer;transition:transform .15s ease, background-color .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease}
+      .gfx-staff-crest{height:64px;width:64px;object-fit:contain;display:block;margin:0 auto;transition:transform .15s ease, filter .15s ease}
+      .gfx-staff-name{font-size:13px;opacity:.9}
+      .gfx-staff-tile:hover{transform:translateY(-2px) scale(1.02); background:var(--hover-bg, #101a33); color:var(--hover-fg, #e5e7eb); border-color:rgba(255,255,255,.25); box-shadow:0 10px 28px rgba(0,0,0,.35)}
+      .gfx-staff-tile:hover .gfx-staff-crest{transform:scale(1.12); filter:drop-shadow(0 6px 10px rgba(0,0,0,.35))}
+      .gfx-staff-table{width:100%;border-collapse:collapse;table-layout:fixed}
+      .gfx-staff-table th,.gfx-staff-table td{border:1px solid #233152;padding:8px 10px;text-align:left;font-size:13px;vertical-align:middle}
+      .gfx-staff-table th{background:#111a2f;position:sticky;top:0;z-index:1}
+      .col-num{width:70px;text-align:center;font-weight:700}
+      .col-last{width:28%}
+      .col-first{width:24%}
+      .col-onair{width:34%}
+      .col-portrait{width:8%; text-align:center}
+      .p-onair-input,.p-txt{width:100%;border:1px solid #2b3852;border-radius:6px;padding:8px 10px;background:#0a0f1e;color:#e5e7eb;font-size:14px}
+      .portrait-wrap{display:flex;align-items:center;justify-content:center}
+      .chk-yellow{appearance:none;position:relative;width:20px;height:20px;border-radius:4px;border:1px solid #b38f00;background:#ffdd00;cursor:pointer;display:inline-block;transition:filter .15s ease, transform .1s ease}
+      .chk-yellow:hover{filter:brightness(1.05)}
+      .chk-yellow:active{transform:scale(0.96)}
+      .chk-yellow::after{content:'\\2713'; position:absolute; inset:0; display:grid; place-items:center; color:#111; font-size:15px; font-weight:900; transform:scale(0); transition:transform .12s ease}
+      .chk-yellow:checked::after{transform:scale(1)}
+      @media (max-width:900px){.gfx-staff-grid{grid-template-columns:repeat(2,1fr)}}
+      @media (max-width:560px){.gfx-staff-grid{grid-template-columns:1fr}}
+    `;
+    const tag = document.createElement('style');
+    tag.id = 'gfx-staff-style';
+    tag.textContent = css;
+    document.head.appendChild(tag);
+  }
+
+  function ensureOverlay() {
+    injectStaffStyle();
+    let ov = document.getElementById('gfx-staff-overlay');
+    if (ov) return ov;
+    ov = document.createElement('div');
+    ov.id = 'gfx-staff-overlay';
+    ov.innerHTML = `
+      <div class="gfx-staff-sheet" role="dialog" aria-modal="true" aria-label="Staff & Player Pics">
+        <div class="gfx-staff-head">
+          <img src="${LEAGUE_LOGO}" alt="Brack Super League" style="height:32px;width:auto;">
+          <div class="gfx-staff-title">Staff & Player Pics – Brack Super League</div>
+          <div class="gfx-staff-tools"></div>
+          <button class="gfx-staff-back" type="button" aria-label="Close">Back</button>
+        </div>
+        <div id="gfx-staff-body"></div>
+      </div>`;
+    document.body.appendChild(ov);
+    ov.querySelector('.gfx-staff-back').addEventListener('click', closeOverlay);
+    ov.addEventListener('mousedown', (e) => { if (e.target === ov) closeOverlay(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && ov.classList.contains('show')) closeOverlay(); });
+    return ov;
+  }
+  function openOverlay()  { ensureOverlay().classList.add('show'); }
+  function closeOverlay() { const ov = document.getElementById('gfx-staff-overlay'); if (ov) ov.classList.remove('show'); }
+
+  /* ---------- Persistenz ---------- */
+  function loadState() {
+    try {
+      const s = JSON.parse(localStorage.getItem(STATE_KEY)) || {};
+      s.players = s.players || {}; // per Spieler (onAir/portrait): key "<club>:<pid>"
+      s.manual  = s.manual  || {}; // pro Club: Array manueller Spieler
+      return s;
+    } catch { return { players:{}, manual:{} }; }
+  }
+  function saveState(s) { localStorage.setItem(STATE_KEY, JSON.stringify(s)); }
+  function pKey(clubId, playerId) { return `${clubId}:${playerId}`; }
+  function getManual(clubId){ const s=loadState(); return Array.isArray(s.manual[clubId]) ? s.manual[clubId] : []; }
+  function setManual(clubId, arr){ const s=loadState(); s.manual[clubId]=arr; saveState(s); }
+
+  /* ---------- Grid (Team-Auswahl) ---------- */
+  function showGrid() {
+    const body = ensureOverlay().querySelector('#gfx-staff-body');
+    body.innerHTML = `<div class="gfx-staff-grid"></div>`;
+    const grid = body.firstElementChild;
+
+    CLUBS.forEach(c => {
+      const tile = document.createElement('div');
+      tile.className = 'gfx-staff-tile';
+      const bg = normHex(c.color);
+      if (bg) {
+        tile.style.setProperty('--hover-bg', bg);
+        tile.style.setProperty('--hover-fg', bestTextColor(bg));
+      }
+      tile.setAttribute('data-club', c.id);
+      tile.innerHTML = `
+        <img class="gfx-staff-crest" src="${ICON_BASE + c.file}" alt="${c.name}">
+        <div class="gfx-staff-name">${c.name}</div>`;
+      tile.addEventListener('click', () => showTeam(c.id));
+      grid.appendChild(tile);
+    });
+    openOverlay();
+  }
+
+  /* ---------- Team-Ansicht (nur Tabelle) ---------- */
+  async function showTeam(clubId) {
+    const club = CLUBS.find(c => c.id === clubId);
+    const body = ensureOverlay().querySelector('#gfx-staff-body');
+
+    const clubFg = (clubId === 'yb') ? '#000000' : '#FFFFFF';
+    const clubBg = club.color;
+
+    body.innerHTML = `
+      <div class="gfx-staff-teamhead" style="display:flex;align-items:center;gap:10px;margin:4px 0 14px">
+        <img src="${ICON_BASE + club.file}" alt="${club.name}" style="height:28px;width:28px;object-fit:contain;">
+        <strong>${club.name}</strong>
+        <span class="club-badge ${clubId==='yb'?'yb-dark':''}" style="background:${clubBg};color:${clubFg}">Staff</span>
+      </div>
+      <table class="gfx-staff-table" id="gfx-staff-table">
+        <colgroup>
+          <col class="col-num"><col class="col-last"><col class="col-first"><col class="col-onair"><col class="col-portrait">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>Vorname</th>
+            <th>On‑Air</th>
+            <th>Portrait</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>`;
+
+    // Toolbar-Buttons
+    const tools = ensureOverlay().querySelector('.gfx-staff-tools');
+    tools.innerHTML = '';
+    const btnAdd  = document.createElement('button');
+    btnAdd.className = 'gfx-staff-btn';
+    btnAdd.textContent = '＋ line';
+    const btnSort = document.createElement('button');
+    btnSort.className = 'gfx-staff-btn';
+    btnSort.textContent = '# ↑ sort';
+    tools.appendChild(btnAdd);
+    tools.appendChild(btnSort);
+
+    const tbody = body.querySelector('tbody');
+    const st = loadState();
+
+    // 1) Backend/Stub laden
+    const basePlayers = await fetchStaff(clubId);
+
+    // 2) Manuelle Spieler laden
+    const manualPlayers = getManual(clubId);
+
+    // 3) Rendern
+    basePlayers.forEach(pl => appendRow(tbody, clubId, pl, /*isManual*/false, st));
+    manualPlayers.forEach(pl => appendRow(tbody, clubId, pl, /*isManual*/true,  st));
+
+    // Zeile hinzufügen
+    btnAdd.addEventListener('click', () => {
+      const man = getManual(clubId);
+      const id = `manual-${Date.now()}`;
+      const pl = { id, number:'', last_name:'', first_name:'', on_air_name:'', portrait_present:false };
+      man.push(pl); setManual(clubId, man);
+      appendRow(tbody, clubId, pl, true, loadState());
+    });
+
+    // Sortieren
+    btnSort.addEventListener('click', () => {
+      sortByNumberAsc(tbody);
+      // Manuelle Reihenfolge persistieren
+      const rows = Array.from(tbody.querySelectorAll('tr[data-manual="1"]'));
+      const newOrder = rows.map(tr => ({
+        id: tr.dataset.id,
+        number: tr.querySelector('.inp-num')?.value || '',
+        last_name: tr.querySelector('.inp-last')?.value || '',
+        first_name: tr.querySelector('.inp-first')?.value || '',
+        on_air_name: tr.querySelector('.p-onair-input')?.value || '',
+        portrait_present: !!tr.querySelector('.chk-yellow')?.checked
+      }));
+      setManual(clubId, newOrder);
+    });
+
+    // Änderungen speichern
+    tbody.addEventListener('input', (e) => handleEdit(e, clubId));
+    tbody.addEventListener('change', (e) => handleEdit(e, clubId));
+
+    openOverlay();
+  }
+
+  function appendRow(tbody, clubId, pl, isManual, st) {
+    const key = pKey(clubId, pl.id);
+    const saved = (st.players && st.players[key]) || {};
+    const onAir = isManual ? (pl.on_air_name || '') : (saved.onAirName ?? pl.on_air_name ?? '');
+    const portrait = isManual ? !!pl.portrait_present : ((typeof saved.portrait === 'boolean') ? saved.portrait : !!pl.portrait_present);
+
+    const tr = document.createElement('tr');
+    tr.dataset.id = pl.id;
+    tr.dataset.manual = isManual ? '1' : '0';
+
+    tr.innerHTML = isManual ? `
+      <td class="col-num"><input class="p-txt inp-num" type="number" inputmode="numeric" min="0" step="1" value="${escapeHtml(pl.number||'')}"></td>
+      <td class="col-last"><input class="p-txt inp-last" type="text" value="${escapeHtml(pl.last_name||'')}"></td>
+      <td class="col-first"><input class="p-txt inp-first" type="text" value="${escapeHtml(pl.first_name||'')}"></td>
+      <td class="col-onair"><input class="p-onair-input" type="text" value="${escapeHtml(onAir)}" data-club="${clubId}" data-pid="${pl.id}"></td>
+      <td class="col-portrait">
+        <div class="portrait-wrap">
+          <input class="chk-yellow" type="checkbox" ${portrait ? 'checked' : ''} data-club="${clubId}" data-pid="${pl.id}">
+        </div>
+      </td>
+    ` : `
+      <td class="col-num">${escapeHtml(pl.number ?? '')}</td>
+      <td class="col-last">${escapeHtml(pl.last_name ?? '')}</td>
+      <td class="col-first">${escapeHtml(pl.first_name ?? '')}</td>
+      <td class="col-onair"><input class="p-onair-input" type="text" value="${escapeHtml(onAir)}" data-club="${clubId}" data-pid="${pl.id}"></td>
+      <td class="col-portrait">
+        <div class="portrait-wrap">
+          <input class="chk-yellow" type="checkbox" ${portrait ? 'checked' : ''} data-club="${clubId}" data-pid="${pl.id}">
+        </div>
+      </td>
+    `;
+
+    tbody.appendChild(tr);
+  }
+
+  function handleEdit(e, clubId) {
+    const el = e.target;
+    const tr = el.closest('tr'); if (!tr) return;
+    const isManual = tr.dataset.manual === '1';
+    const pid = tr.dataset.id; if (!pid) return;
+
+    if (isManual) {
+      const man = getManual(clubId);
+      const idx = man.findIndex(x => x.id === pid);
+      if (idx !== -1) {
+        man[idx].number = tr.querySelector('.inp-num')?.value || '';
+        man[idx].last_name = tr.querySelector('.inp-last')?.value || '';
+        man[idx].first_name = tr.querySelector('.inp-first')?.value || '';
+        man[idx].on_air_name = tr.querySelector('.p-onair-input')?.value || '';
+        man[idx].portrait_present = !!tr.querySelector('.chk-yellow')?.checked;
+        setManual(clubId, man);
+      }
+    } else {
+      const s = loadState();
+      const key = pKey(clubId, pid);
+      s.players[key] = s.players[key] || {};
+      if (el.classList.contains('p-onair-input')) s.players[key].onAirName = el.value.trim();
+      if (el.classList.contains('chk-yellow'))      s.players[key].portrait  = el.checked;
+      saveState(s);
+    }
+  }
+
+  function sortByNumberAsc(tbody) {
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    rows.sort((a,b) => {
+      const aNumEl = a.querySelector('.inp-num') || a.querySelector('.col-num');
+      const bNumEl = b.querySelector('.inp-num') || b.querySelector('.col-num');
+      const aVal = a.querySelector('.inp-num') ? aNumEl.value : aNumEl.textContent;
+      const bVal = b.querySelector('.inp-num') ? bNumEl.value : bNumEl.textContent;
+      return asInt(aVal) - asInt(bVal);
+    });
+    rows.forEach(r => tbody.appendChild(r));
+  }
+
+  /* ---------- Daten laden (Backend/Stub) ---------- */
+  async function fetchStaff(clubId) {
+    try {
+      const resp = await fetch(`/api/roster?club=${encodeURIComponent(clubId)}`, { credentials: 'include' });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const json = await resp.json();
+      if (Array.isArray(json?.players)) return json.players;
+    } catch (e) {
+      // Fallback (Stub) – hält die UI benutzbar, selbst wenn /api/roster 404 ist
+      if (clubId === 'fcb') {
+        return [
+          { id:'fcb-34', number:34, first_name:'Taulant', last_name:'Xhaka', on_air_name:'T. Xhaka', portrait_present:true },
+          { id:'fcb-20', number:20, first_name:'Fabian',  last_name:'Frei',  on_air_name:'F. Frei',  portrait_present:false }
+        ];
+      }
+      return [];
+    }
+  }
+
+  /* ---------- Button neben „GFX‑Manual“ einfügen ---------- */
+  function attachRosterButton() {
+    if (document.querySelector('.gfx-roster-btn')) return;
+    const manualBtn = Array.from(document.querySelectorAll('button,a'))
+      .find(el => /gfx.?manual/i.test((el.textContent || '').trim()));
+    if (!manualBtn) return;
+
+    const rosterBtn = document.createElement(manualBtn.tagName === 'A' ? 'a' : 'button');
+    if (manualBtn.tagName !== 'A') rosterBtn.type = 'button';
+    rosterBtn.textContent = 'Staff & Player Pics';
+    if (manualBtn.className) rosterBtn.className = manualBtn.className + ' gfx-roster-btn';
+    rosterBtn.addEventListener('click', (e) => { e.preventDefault(); showGrid(); });
+    manualBtn.insertAdjacentElement('afterend', rosterBtn);
+  }
+
+  document.addEventListener('DOMContentLoaded', attachRosterButton);
+
+  // Debug/Expose
+  if (typeof window !== 'undefined') {
+    window.showGfxRosterGrid = showGrid;
+    window.showGfxRosterTeam = showTeam;
   }
 })();

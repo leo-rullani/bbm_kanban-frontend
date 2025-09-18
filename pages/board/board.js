@@ -73,27 +73,35 @@ function cleanCurrentTask() {
 /**
  * Initializes the board view on page load.
  *
- * Loads the current board data, resets the currentTask object,
- * renders all tasks and members, updates the board title,
- * and (if a task_id URL parameter is present) opens the task detail dialog.
+ * Lädt Boarddaten, setzt State zurück, rendert Tasks/Members,
+ * aktualisiert den Titel & toggelt die Graphics‑Header‑Buttons
+ * (GFX‑Manual, Kits, Roster) – ohne sichtbaren „Flash“.
  *
- * Typically called once when the page is loaded.
- *
- * @returns {Promise<void>} Resolves when initialization is complete.
+ * @returns {Promise<void>}
  */
 async function init() {
-    await setBoard();
-    window.currentBoard = currentBoard;
-    cleanCurrentTask();
-    renderAllTasks();
-    renderMemberList();
-    renderTitle();
-    const hdrBtn = document.getElementById('pdf-download-btn');
-    if (hdrBtn) hdrBtn.style.display = 'none';
-    updateGfxManualButton();
+  // Erst alles verstecken → kein Flash
+  prehideGraphicsOnlyButtons();
 
-    if (getParamFromUrl('task_id')) openTaskDetailDialog(getParamFromUrl('task_id'));
+  await setBoard();
+  window.currentBoard = currentBoard;
+  cleanCurrentTask();
+  renderAllTasks();
+  renderMemberList();
+  renderTitle();
+
+  const hdrBtn = document.getElementById('pdf-download-btn');
+  if (hdrBtn) hdrBtn.style.display = 'none';
+
+  // Buttons für Graphics‑Boards toggeln
+  updateGfxManualButton();
+  updateKitsButton();
+  updateRosterButton(); // ← NEU
+
+  const tid = getParamFromUrl('task_id');
+  if (tid) openTaskDetailDialog(tid);
 }
+
 /**
  * Updates the board title in the DOM.
  *
@@ -342,17 +350,186 @@ function updateGfxManualButton() {
     if (!btn) return;
 
     const isGraphics = typeof isGraphicsRapportBoard === 'function' && isGraphicsRapportBoard();
+
     if (isGraphics) {
         const url = (typeof GFX_MANUAL_URL !== 'undefined' && GFX_MANUAL_URL)
             ? GFX_MANUAL_URL
             : '/manuals/bbm_gfx_manual.pdf';
         btn.href = url;
-        btn.style.display = 'inline-flex';  // match appearance of other header buttons
-    } else {
-        btn.style.display = 'none';
     }
+
+    // Harte Sichtbarkeitssteuerung (verhindert "Flash")
+    btn.hidden = !isGraphics;
+    btn.style.display = isGraphics ? 'inline-flex' : 'none';
 }
 
+/* ------------------------------------------------------------------ */
+/*  Kits Button – Visibility & Action                                  */
+/* ------------------------------------------------------------------ */
+/**
+ * Toggles the visibility and click action of the "Kits" button
+ * in the board header – analog zum GFX‑Manual‑Button.
+ *
+ * Regeln:
+ *  - Sichtbar NUR auf Graphics‑Boards (per {@link isGraphicsRapportBoard}).
+ *  - Wenn sichtbar: Klick öffnet das Kits‑Overlay (window.showGfxKitsGrid()).
+ *  - Button‑ID: bevorzugt '#gfx-kits-btn'; Fallback '#kits-btn'.
+ *  - Zusätzlich per IIFE injizierte Buttons ('.gfx-kits-btn') werden mitgesteuert.
+ *
+ * Voraussetzungen:
+ *  - Die Kits‑IIFE setzt global: window.showGfxKitsGrid (optional).
+ *
+ * @returns {void}
+ */
+function updateKitsButton() {
+    const isGraphics =
+        typeof isGraphicsRapportBoard === 'function' && isGraphicsRapportBoard();
+
+    // Header-Button (IDs geprüft in Reihenfolge)
+    const headerBtn =
+        document.getElementById('gfx-kits-btn') ||
+        document.getElementById('kits-btn');
+
+    if (headerBtn) {
+        headerBtn.hidden = !isGraphics;
+        headerBtn.style.display = isGraphics ? 'inline-flex' : 'none';
+
+        if (!isGraphics) {
+            headerBtn.onclick = null;            // eventuelle Direktbindung lösen
+            headerBtn.removeAttribute('data-bound');
+        } else if (!headerBtn.dataset.bound) {
+            headerBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (typeof window.showGfxKitsGrid === 'function') {
+                    window.showGfxKitsGrid();
+                } else {
+                    console.warn('[Kits] window.showGfxKitsGrid() ist noch nicht verfügbar.');
+                }
+            });
+            headerBtn.dataset.bound = '1';
+        }
+    }
+
+    // Zusätzlich: evtl. bereits injizierte Buttons (per IIFE) mitsteuern
+    document.querySelectorAll('.gfx-kits-btn').forEach((btn) => {
+        btn.hidden = !isGraphics;
+        btn.style.display = isGraphics ? '' : 'none';
+
+        if (!isGraphics) {
+            btn.onclick = null;
+            btn.removeAttribute('data-bound');
+        } else if (!btn.dataset.bound) {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (typeof window.showGfxKitsGrid === 'function') {
+                    window.showGfxKitsGrid();
+                }
+            });
+            btn.dataset.bound = '1';
+        }
+    });
+}
+
+/* ------------------------------------------------------------------ */
+/*  Roster / PlayerPics Button – Visibility & Action                   */
+/* ------------------------------------------------------------------ */
+/**
+ * Toggles the visibility and click action of the "Kader & Portraits"
+ * header button – analog zum GFX‑Manual und Kits‑Button.
+ *
+ * Regeln:
+ *  - Sichtbar NUR auf Graphics‑Boards (per {@link isGraphicsRapportBoard}).
+ *  - Wenn sichtbar: Klick öffnet das Roster‑Overlay (window.showGfxRosterGrid()).
+ *  - Button‑ID: bevorzugt '#gfx-roster-btn'; Fallback '#playerpics-btn'.
+ *  - Zusätzlich per Script injizierte Buttons ('.gfx-roster-btn') werden mitgesteuert.
+ *
+ * Voraussetzungen:
+ *  - Die Roster‑IIFE setzt global: window.showGfxRosterGrid() (siehe IIFE unten).
+ *
+ * @returns {void}
+ */
+function updateRosterButton() {
+  const isGraphics =
+    typeof isGraphicsRapportBoard === 'function' && isGraphicsRapportBoard();
+
+  // Header-Button (IDs in Reihenfolge prüfen)
+  const headerBtn =
+    document.getElementById('gfx-roster-btn') ||
+    document.getElementById('playerpics-btn');
+
+  if (headerBtn) {
+    headerBtn.hidden = !isGraphics;
+    headerBtn.style.display = isGraphics ? 'inline-flex' : 'none';
+
+    if (!isGraphics) {
+      headerBtn.onclick = null;
+      headerBtn.removeAttribute('data-bound');
+    } else if (!headerBtn.dataset.bound) {
+      headerBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (typeof window.showGfxRosterGrid === 'function') {
+          window.showGfxRosterGrid();
+        } else {
+          console.warn('[Roster] window.showGfxRosterGrid() ist noch nicht verfügbar.');
+        }
+      });
+      headerBtn.dataset.bound = '1';
+    }
+  }
+
+  // Falls woanders injiziert (z.B. neben GFX‑Manual) – opt. mitsteuern
+  document.querySelectorAll('.gfx-roster-btn').forEach((btn) => {
+    btn.hidden = !isGraphics;
+    btn.style.display = isGraphics ? '' : 'none';
+
+    if (!isGraphics) {
+      btn.onclick = null;
+      btn.removeAttribute('data-bound');
+    } else if (!btn.dataset.bound) {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (typeof window.showGfxRosterGrid === 'function') {
+          window.showGfxRosterGrid();
+        }
+      });
+      btn.dataset.bound = '1';
+    }
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/*  Graphics‑Only Header Buttons: Pre‑Hide to prevent initial flash    */
+/* ------------------------------------------------------------------ */
+/**
+ * Immediately hides header buttons that should only appear
+ * on Graphics boards (GFX Manual & Kits). This prevents a brief
+ * flash before `init()` has loaded the board and toggled visibility.
+ *
+ * Safe to call multiple times.
+ *
+ * Hides:
+ *  - #gfx-manual-btn (falls vorhanden)
+ *  - #gfx-kits-btn (falls vorhanden)
+ *  - .gfx-kits-btn (falls per IIFE injiziert)
+ *
+ * @returns {void}
+ */
+function prehideGraphicsOnlyButtons() {
+    // Header IDs
+    ['gfx-manual-btn', 'gfx-kits-btn'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.hidden = true;           // semantisch
+            el.style.display = 'none';  // visuell
+        }
+    });
+
+    // Evtl. bereits injizierte Kits-Buttons mitsteuern
+    document.querySelectorAll('.gfx-kits-btn').forEach((el) => {
+        el.hidden = true;
+        el.style.display = 'none';
+    });
+}
 
 /* ------------------------------------------------------------------ */
 /*  REPLACED openCreateTaskDialog()                                   */
@@ -996,26 +1173,26 @@ function searchInTasks(searchTerm) {
 }
 
 /**
- * Sends a PATCH request to update the board settings (e.g., title) for the current board.
+ * Aktualisiert Board‑Einstellungen (z. B. Titel) via API.
+ * Re‑evaluates Graphics‑Heuristik und toggelt Header‑Buttons
+ * (GFX‑Manual, Kits, Roster) nach erfolgreichem Update.
  *
- * If the update is successful, updates the current board title and re-renders it.
- * If the request fails, displays error messages.
- *
- * @param {Object} data - The updated board data to send to the API.
- * @returns {Promise<Object>} The API response object.
+ * @param {Object} data
+ * @returns {Promise<Object>}
  */
 async function updateBoard(data) {
-    let response = await patchData(BOARDS_URL + currentSettingsBoard.id + "/", data)
-    if (!response.ok) {
-        let errorArr = extractErrorMessages(response.data)
-        showToastMessage(true, errorArr)
-    } else {
-        currentBoard.title = response.data.title
-        renderTitle()
-        // ▼ NEU: falls der Titel geändert wurde -> Grafik-Heuristik neu auswerten
-        updateGfxManualButton();
-    }
-    return response
+  let response = await patchData(BOARDS_URL + currentSettingsBoard.id + "/", data);
+  if (!response.ok) {
+    let errorArr = extractErrorMessages(response.data);
+    showToastMessage(true, errorArr);
+  } else {
+    currentBoard.title = response.data.title;
+    renderTitle();
+    updateGfxManualButton();
+    updateKitsButton();
+    updateRosterButton(); // ← NEU
+  }
+  return response;
 }
 
 /**

@@ -12,7 +12,7 @@ function setAuthCredentials(token, userId, email, fullname) {
     localStorage.setItem('auth-fullname', fullname);
 }
 
-/**
+/**  
  * Removes authentication credentials from localStorage.
  */
 function removeAuthCredentials() {
